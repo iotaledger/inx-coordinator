@@ -359,6 +359,10 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 				return common.CriticalError(fmt.Errorf("unable to persist migrator state before send: %w", err))
 			}
 
+			if coo.treasuryOutputFunc == nil {
+				return common.CriticalError(errors.New("unable to fetch unspent treasury output: no fetch function configured"))
+			}
+
 			currentTreasuryOutput, err := coo.treasuryOutputFunc()
 			if err != nil {
 				return common.CriticalError(fmt.Errorf("unable to fetch unspent treasury output: %w", err))
