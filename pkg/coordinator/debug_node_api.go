@@ -31,6 +31,8 @@ type DebugNodeAPIClient struct {
 type computeWhiteFlagMutationsRequest struct {
 	// The index of the milestone.
 	Index milestone.Index `json:"index"`
+	// The timestamp of the milestone.
+	Timestamp uint32 `json:"timestamp"`
 	// The hex encoded message IDs of the parents the milestone references.
 	Parents []string `json:"parentMessageIds"`
 }
@@ -43,11 +45,12 @@ type computeWhiteFlagMutationsResponse struct {
 
 // Whiteflag is the debug route to compute the white flag confirmation for the cone of the given parents.
 // This function returns the merkle tree hash calculated by the node.
-func (api *DebugNodeAPIClient) Whiteflag(index milestone.Index, parents hornet.MessageIDs) (*MerkleTreeHash, error) {
+func (api *DebugNodeAPIClient) Whiteflag(index milestone.Index, timestamp uint32, parents hornet.MessageIDs) (*MerkleTreeHash, error) {
 
 	req := &computeWhiteFlagMutationsRequest{
-		Index:   index,
-		Parents: parents.ToHex(),
+		Index:     index,
+		Timestamp: timestamp,
+		Parents:   parents.ToHex(),
 	}
 	res := &computeWhiteFlagMutationsResponse{}
 
