@@ -64,7 +64,6 @@ var (
 	CorePlugin *node.CorePlugin
 	deps       dependencies
 
-	//TODO: change to false
 	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
 
