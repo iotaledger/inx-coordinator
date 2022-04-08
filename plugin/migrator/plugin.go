@@ -3,17 +3,20 @@ package migrator
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
 	"github.com/gohornet/hornet/pkg/common"
+	validator "github.com/gohornet/hornet/pkg/model/migrator"
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -60,10 +63,32 @@ type dependencies struct {
 // provide provides the MigratorService as a singleton.
 func provide(c *dig.Container) {
 
+	type validatorDeps struct {
+		dig.In
+		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	}
+
+	if err := c.Provide(func(deps validatorDeps) *validator.Validator {
+		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
+			URI:    deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress),
+			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
+		})
+		if err != nil {
+			Plugin.LogPanicf("failed to initialize API: %s", err)
+		}
+		return validator.NewValidator(
+			iotaAPI,
+			deps.NodeConfig.String(CfgReceiptsValidatorCoordinatorAddress),
+			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
+		)
+	}); err != nil {
+		Plugin.LogPanic(err)
+	}
+
 	type serviceDeps struct {
 		dig.In
 		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Validator  *migrator.Validator
+		Validator  *validator.Validator
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *migrator.MigratorService {
