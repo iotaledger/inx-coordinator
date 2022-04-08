@@ -12,6 +12,7 @@ import (
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
+	"github.com/gohornet/inx-coordinator/plugin/migrator"
 	"github.com/iotaledger/hive.go/configuration"
 	inx "github.com/iotaledger/inx/go"
 )
@@ -74,7 +75,11 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(client inx.INXClient) (*nodebridge.NodeBridge, error) {
-		return nodebridge.NewNodeBridge(CorePlugin.Daemon().ContextStopped(), client)
+		migrationsEnabled := !CorePlugin.Node.IsSkipped(migrator.Plugin)
+		return nodebridge.NewNodeBridge(CorePlugin.Daemon().ContextStopped(),
+			client,
+			migrationsEnabled,
+			CorePlugin.Logger())
 	}); err != nil {
 		CorePlugin.LogPanic(err)
 	}

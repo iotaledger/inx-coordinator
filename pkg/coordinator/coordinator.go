@@ -292,6 +292,9 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 
 		coo.state = state
 		coo.bootstrapped = false
+
+		coo.LogInfof("bootstrapping Coordinator at %d", startIndex)
+
 		return nil
 	}
 
@@ -307,6 +310,8 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 	if latestMilestone.Index != coo.state.LatestMilestoneIndex {
 		return fmt.Errorf("previous milestone does not match latest milestone in node. previous: %d, INX: %d", coo.state.LatestMilestoneIndex, latestMilestone.Index)
 	}
+
+	coo.LogInfof("resuming Coordinator at %d", latestMilestone.Index)
 
 	coo.bootstrapped = true
 	return nil

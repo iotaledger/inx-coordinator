@@ -2,12 +2,12 @@ package nodebridge
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 	"time"
 
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"github.com/pkg/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
@@ -16,11 +16,13 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/events"
+	"github.com/iotaledger/hive.go/logger"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 type NodeBridge struct {
+	Logger             *logger.Logger
 	Client             inx.INXClient
 	ProtocolParameters *inx.ProtocolParameters
 	TangleListener     *TangleListener
@@ -29,6 +31,10 @@ type NodeBridge struct {
 	isSyncedMutex      sync.RWMutex
 	latestMilestone    *inx.Milestone
 	confirmedMilestone *inx.Milestone
+
+	enableTreasuryUpdates bool
+	treasuryOutputMutex   sync.RWMutex
+	latestTreasuryOutput  *inx.TreasuryOutput
 }
 
 type Events struct {
@@ -44,8 +50,8 @@ func INXMilestoneCaller(handler interface{}, params ...interface{}) {
 	handler.(func(metadata *inx.Milestone))(params[0].(*inx.Milestone))
 }
 
-func NewNodeBridge(ctx context.Context, client inx.INXClient) (*NodeBridge, error) {
-	fmt.Println("Connecting to node and reading protocol parameters...")
+func NewNodeBridge(ctx context.Context, client inx.INXClient, enableTreasuryUpdates bool, logger *logger.Logger) (*NodeBridge, error) {
+	logger.Info("Connecting to node and reading protocol parameters...")
 
 	retryBackoff := func(_ uint) time.Duration {
 		return 1 * time.Second
@@ -62,6 +68,7 @@ func NewNodeBridge(ctx context.Context, client inx.INXClient) (*NodeBridge, erro
 	}
 
 	return &NodeBridge{
+		Logger:             logger,
 		Client:             client,
 		ProtocolParameters: protocolParams,
 		TangleListener:     newTangleListener(),
@@ -69,8 +76,9 @@ func NewNodeBridge(ctx context.Context, client inx.INXClient) (*NodeBridge, erro
 			MessageSolid:              events.NewEvent(INXMessageMetadataCaller),
 			ConfirmedMilestoneChanged: events.NewEvent(INXMilestoneCaller),
 		},
-		latestMilestone:    nodeStatus.GetLatestMilestone(),
-		confirmedMilestone: nodeStatus.GetConfirmedMilestone(),
+		latestMilestone:       nodeStatus.GetLatestMilestone(),
+		confirmedMilestone:    nodeStatus.GetConfirmedMilestone(),
+		enableTreasuryUpdates: enableTreasuryUpdates,
 	}, nil
 }
 
@@ -100,6 +108,9 @@ func (n *NodeBridge) Start(ctx context.Context) {
 	go n.listenToConfirmedMilestone(ctx)
 	go n.listenToLatestMilestone(ctx)
 	go n.listenToSolidMessages(ctx)
+	if n.enableTreasuryUpdates {
+		go n.listenToTreasuryUpdates(ctx)
+	}
 }
 
 func (n *NodeBridge) IsNodeSynced() bool {
@@ -124,8 +135,17 @@ func (n *NodeBridge) LatestMilestone() *coordinator.LatestMilestone {
 }
 
 func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, error) {
-	//TODO: inx, new call
-	return nil, nil
+	n.treasuryOutputMutex.RLock()
+	defer n.treasuryOutputMutex.RUnlock()
+
+	if n.latestTreasuryOutput == nil {
+		return nil, errors.New("haven't received any treasury outputs yet")
+	}
+
+	return &coordinator.LatestTreasuryOutput{
+		MilestoneID: n.latestTreasuryOutput.UnwrapMilestoneID(),
+		Amount:      n.latestTreasuryOutput.GetAmount(),
+	}, nil
 }
 
 func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint64, parents hornet.MessageIDs) (*coordinator.MerkleTreeHash, error) {
@@ -175,7 +195,7 @@ func (n *NodeBridge) listenToSolidMessages(ctx context.Context) error {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
 			}
-			fmt.Printf("listenToSolidMessages: %s\n", err.Error())
+			n.Logger.Errorf("listenToSolidMessages: %s", err.Error())
 			break
 		}
 		if c.Err() != nil {
@@ -199,7 +219,7 @@ func (n *NodeBridge) listenToLatestMilestone(ctx context.Context) error {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
 			}
-			fmt.Printf("listenToLatestMilestone: %s\n", err.Error())
+			n.Logger.Errorf("listenToLatestMilestone: %s", err.Error())
 			break
 		}
 		if c.Err() != nil {
@@ -223,13 +243,37 @@ func (n *NodeBridge) listenToConfirmedMilestone(ctx context.Context) error {
 			if err == io.EOF || status.Code(err) == codes.Canceled {
 				break
 			}
-			fmt.Printf("listenToConfirmedMilestone: %s\n", err.Error())
+			n.Logger.Errorf("listenToConfirmedMilestone: %s", err.Error())
 			break
 		}
 		if c.Err() != nil {
 			break
 		}
 		n.processConfirmedMilestone(milestone)
+	}
+	return nil
+}
+
+func (n *NodeBridge) listenToTreasuryUpdates(ctx context.Context) error {
+	c, cancel := context.WithCancel(ctx)
+	defer cancel()
+	stream, err := n.Client.ListenToTreasuryUpdates(c, &inx.LedgerRequest{})
+	if err != nil {
+		return err
+	}
+	for {
+		update, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF || status.Code(err) == codes.Canceled {
+				break
+			}
+			n.Logger.Errorf("listenToTreasuryUpdates: %s", err.Error())
+			break
+		}
+		if c.Err() != nil {
+			break
+		}
+		n.processTreasuryUpdate(update)
 	}
 	return nil
 }
@@ -252,4 +296,12 @@ func (n *NodeBridge) processConfirmedMilestone(ms *inx.Milestone) {
 
 	n.TangleListener.processConfirmedMilestone(ms)
 	n.Events.ConfirmedMilestoneChanged.Trigger(ms)
+}
+
+func (n *NodeBridge) processTreasuryUpdate(update *inx.TreasuryUpdate) {
+	n.treasuryOutputMutex.Lock()
+	defer n.treasuryOutputMutex.Unlock()
+	created := update.GetCreated()
+	n.Logger.Infof("Updating TreasuryOutput at %d: MilestoneID: %s, Amount: %d ", update.GetMilestoneIndex(), created.UnwrapMilestoneID().ToHex(), created.GetAmount())
+	n.latestTreasuryOutput = created
 }
