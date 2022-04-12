@@ -33,19 +33,22 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Mes
 }
 
 // createMilestone creates a signed milestone message.
-func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64, parents hornet.MessageIDs, receipt *iotago.Receipt, merkleRootTreeHash *MerkleTreeHash) (*iotago.Message, error) {
+func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint64, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, lastMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleProof) (*iotago.Message, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
 	parentsSliceOfArray := parents.ToSliceOfArrays()
-	whiteFlagMerkleRootTreeHash := [iotago.MilestoneInclusionMerkleProofLength]byte{}
-	copy(whiteFlagMerkleRootTreeHash[:], merkleRootTreeHash[:])
-	msPayload, err := iotago.NewMilestone(uint32(index), timestamp, parentsSliceOfArray, whiteFlagMerkleRootTreeHash)
+	pastConeProof := [iotago.MilestoneMerkleProofLength]byte{}
+	copy(pastConeProof[:], merkleProof.PastConeMerkleProof[:])
+	inclusionProof := [iotago.MilestoneMerkleProofLength]byte{}
+	copy(inclusionProof[:], merkleProof.InclusionMerkleProof[:])
+
+	msPayload, err := iotago.NewMilestone(uint32(index), timestamp, lastMilestoneID, parentsSliceOfArray, pastConeProof, inclusionProof)
 	if err != nil {
 		return nil, err
 	}
 	if receipt != nil {
-		msPayload.Receipt = receipt
+		msPayload.Opts = iotago.MilestoneOpts{receipt}
 	}
 
 	iotaMsg := &iotago.Message{

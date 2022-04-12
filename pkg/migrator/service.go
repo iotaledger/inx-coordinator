@@ -93,7 +93,7 @@ func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *M
 // Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
 // validations happen in the background, Receipt might block until the next receipt is ready.
 // When s is stopped, Receipt will always return nil.
-func (s *MigratorService) Receipt() *iotago.Receipt {
+func (s *MigratorService) Receipt() *iotago.ReceiptMilestoneOpt {
 	// make the channel receive and the state update atomic, so that the state always matches the result
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -270,12 +270,12 @@ func (s *MigratorService) updateState(result *migrationResult) {
 	s.state.LatestIncludedIndex += uint32(len(result.migratedFunds))
 }
 
-func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsEntry) *iotago.Receipt {
+func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsEntry) *iotago.ReceiptMilestoneOpt {
 	// never create an empty receipt
 	if len(funds) == 0 {
 		return nil
 	}
-	return &iotago.Receipt{
+	return &iotago.ReceiptMilestoneOpt{
 		MigratedAt: migratedAt,
 		Final:      final,
 		Funds:      funds,

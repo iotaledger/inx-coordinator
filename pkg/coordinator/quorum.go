@@ -14,6 +14,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/syncutils"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
@@ -116,7 +117,17 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Durat
 // Returns non-critical and critical errors.
 // If no node of the group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash *MerkleTreeHash, groupName string, quorumGroupEntries []*quorumGroupEntry, wg *sync.WaitGroup, quorumDoneChan chan struct{}, quorumErrChan chan error, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) {
+func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleProof,
+	groupName string,
+	quorumGroupEntries []*quorumGroupEntry,
+	wg *sync.WaitGroup,
+	quorumDoneChan chan struct{},
+	quorumErrChan chan error,
+	index milestone.Index,
+	timestamp uint32,
+	parents hornet.MessageIDs,
+	lastMilestoneID iotago.MilestoneID,
+	onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) {
 	// mark the group as done at the end
 	defer wg.Done()
 
@@ -126,14 +137,14 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash *MerkleTreeHas
 
 	// create buffered channels, so the go routines will not be dangling if no receiver waits for the results anymore
 	// garbage collector will take care if the channels are not used anymore. no need to close manually
-	nodeResultChan := make(chan *MerkleTreeHash, len(quorumGroupEntries))
+	nodeResultChan := make(chan *MilestoneMerkleProof, len(quorumGroupEntries))
 	nodeErrorChan := make(chan error, len(quorumGroupEntries))
 
 	for _, entry := range quorumGroupEntries {
-		go func(entry *quorumGroupEntry, nodeResultChan chan *MerkleTreeHash, nodeErrorChan chan error) {
+		go func(entry *quorumGroupEntry, nodeResultChan chan *MilestoneMerkleProof, nodeErrorChan chan error) {
 			ts := time.Now()
 
-			nodeMerkleTreeHash, err := entry.api.Whiteflag(index, timestamp, parents)
+			nodeMerkleTreeHash, err := entry.api.WhiteFlag(index, timestamp, parents, lastMilestoneID)
 
 			// set the stats for the node
 			entry.stats.ResponseTimeSeconds = time.Since(ts).Seconds()
@@ -164,7 +175,8 @@ QuorumLoop:
 			continue
 
 		case nodeMerkleTreeHash := <-nodeResultChan:
-			if cooMerkleTreeHash != nodeMerkleTreeHash {
+			if cooMerkleProof.InclusionMerkleProof != nodeMerkleTreeHash.InclusionMerkleProof ||
+				cooMerkleProof.PastConeMerkleProof != nodeMerkleTreeHash.PastConeMerkleProof {
 				// mismatch of the merkle tree hash of the node => critical error
 				quorumErrChan <- common.CriticalError(ErrQuorumMerkleTreeHashMismatch)
 				return
@@ -187,7 +199,12 @@ QuorumLoop:
 // Returns non-critical and critical errors.
 // If no node of a certain group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash *MerkleTreeHash, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) error {
+func (q *quorum) checkMerkleTreeHash(cooMerkleProof *MilestoneMerkleProof,
+	index milestone.Index,
+	timestamp uint32,
+	parents hornet.MessageIDs,
+	lastMilestoneID iotago.MilestoneID,
+	onGroupEntryError func(groupName string, entry *quorumGroupEntry, err error)) error {
 	q.quorumStatsLock.Lock()
 	defer q.quorumStatsLock.Unlock()
 
@@ -199,7 +216,7 @@ func (q *quorum) checkMerkleTreeHash(cooMerkleTreeHash *MerkleTreeHash, index mi
 		wg.Add(1)
 
 		// ask all groups in parallel
-		go q.checkMerkleTreeHashQuorumGroup(cooMerkleTreeHash, groupName, quorumGroupEntries, wg, quorumDoneChan, quorumErrChan, index, timestamp, parents, onGroupEntryError)
+		go q.checkMerkleTreeHashQuorumGroup(cooMerkleProof, groupName, quorumGroupEntries, wg, quorumDoneChan, quorumErrChan, index, timestamp, parents, lastMilestoneID, onGroupEntryError)
 	}
 
 	go func(wg *sync.WaitGroup, doneChan chan struct{}) {

@@ -148,11 +148,12 @@ func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, 
 	}, nil
 }
 
-func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint64, parents hornet.MessageIDs) (*coordinator.MerkleTreeHash, error) {
+func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
 	req := &inx.WhiteFlagRequest{
 		MilestoneIndex:     uint32(msIndex),
 		MilestoneTimestamp: uint32(msTimestamp),
 		Parents:            parents.ToSliceOfSlices(),
+		LastMilestoneId:    inx.NewMilestoneId(lastMilestoneID),
 	}
 
 	res, err := n.Client.ComputeWhiteFlag(ctx, req)
@@ -160,10 +161,14 @@ func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex mileston
 		return nil, err
 	}
 
-	merkleTreeHash := &coordinator.MerkleTreeHash{}
-	copy(merkleTreeHash[:], res.GetMilestoneInclusionMerkleRoot())
+	proof := &coordinator.MilestoneMerkleProof{
+		PastConeMerkleProof:  &coordinator.MerkleTreeHash{},
+		InclusionMerkleProof: &coordinator.MerkleTreeHash{},
+	}
+	copy(proof.PastConeMerkleProof[:], res.GetMilestonePastConeMerkleProof())
+	copy(proof.InclusionMerkleProof[:], res.GetMilestoneInclusionMerkleProof())
 
-	return merkleTreeHash, nil
+	return proof, nil
 }
 
 func (n *NodeBridge) EmitMessage(ctx context.Context, message *iotago.Message) error {
@@ -302,6 +307,7 @@ func (n *NodeBridge) processTreasuryUpdate(update *inx.TreasuryUpdate) {
 	n.treasuryOutputMutex.Lock()
 	defer n.treasuryOutputMutex.Unlock()
 	created := update.GetCreated()
-	n.Logger.Infof("Updating TreasuryOutput at %d: MilestoneID: %s, Amount: %d ", update.GetMilestoneIndex(), created.UnwrapMilestoneID().ToHex(), created.GetAmount())
+	milestoneID := created.UnwrapMilestoneID()
+	n.Logger.Infof("Updating TreasuryOutput at %d: MilestoneID: %s, Amount: %d ", update.GetMilestoneIndex(), iotago.EncodeHex(milestoneID[:]), created.GetAmount())
 	n.latestTreasuryOutput = created
 }

@@ -33,13 +33,14 @@ type BackPressureFunc func() bool
 type SendMessageFunc = func(message *iotago.Message, msIndex ...milestone.Index) error
 
 type LatestMilestone struct {
-	Index     milestone.Index
-	Timestamp uint64
-	MessageID hornet.MessageID
+	Index       milestone.Index
+	Timestamp   uint64
+	MilestoneID iotago.MilestoneID
+	MessageID   hornet.MessageID
 }
 
 type LatestTreasuryOutput struct {
-	MilestoneID *iotago.MilestoneID
+	MilestoneID iotago.MilestoneID
 	Amount      uint64
 }
 
@@ -55,7 +56,7 @@ var (
 )
 
 // MerkleTreeHash is the merkle tree root hash of all messages.
-type MerkleTreeHash [iotago.MilestoneInclusionMerkleProofLength]byte
+type MerkleTreeHash [iotago.MilestoneMerkleProofLength]byte
 
 // Events are the events issued by the coordinator.
 type Events struct {
@@ -71,7 +72,12 @@ type Events struct {
 
 type IsNodeSyncedFunc = func() bool
 
-type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs) (*MerkleTreeHash, error)
+type MilestoneMerkleProof struct {
+	PastConeMerkleProof  *MerkleTreeHash
+	InclusionMerkleProof *MerkleTreeHash
+}
+
+type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleProof, error)
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
@@ -114,6 +120,10 @@ const (
 	defaultStateFilePath     = "coordinator.state"
 	defaultMilestoneInterval = time.Duration(10) * time.Second
 	defaultPoWWorkerCount    = 0
+)
+
+var (
+	emptyMilestoneID = iotago.MilestoneID{}
 )
 
 // the default options applied to the Coordinator.
@@ -279,14 +289,23 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 		}
 
 		latestMilestoneMessageID := hornet.NullMessageID()
+		latestMilestoneID := iotago.MilestoneID{}
 		if startIndex != 1 {
+
+			if latestMilestone.MessageID.IsNullMessageID() ||
+				latestMilestone.MilestoneID == emptyMilestoneID {
+				return fmt.Errorf("previous milestone messageID and/or milestoneID should not be genesis")
+			}
+
 			// If we don't start a new network, the last milestone has to be referenced
 			latestMilestoneMessageID = latestMilestone.MessageID
+			latestMilestoneID = latestMilestone.MilestoneID
 		}
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
 		state.LatestMilestoneMessageID = latestMilestoneMessageID
+		state.LatestMilestoneID = latestMilestoneID
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = time.Now()
 
@@ -319,7 +338,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index) error {
+func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index, lastMilestoneID iotago.MilestoneID) error {
 
 	parents = parents.RemoveDupsAndSortByLexicalOrder()
 
@@ -330,7 +349,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	merkleTreeHash, err := coo.merkleTreeHashFunc(context.Background(), newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents)
+	merkleProof, err := coo.merkleTreeHashFunc(context.Background(), newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, lastMilestoneID)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -338,7 +357,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// ask the quorum for correct ledger state if enabled
 	if coo.opts.quorum != nil {
 		ts := time.Now()
-		err := coo.opts.quorum.checkMerkleTreeHash(merkleTreeHash, newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, func(groupName string, entry *quorumGroupEntry, err error) {
+		err := coo.opts.quorum.checkMerkleTreeHash(merkleProof, newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, lastMilestoneID, func(groupName string, entry *quorumGroupEntry, err error) {
 			coo.LogInfof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
 		})
 
@@ -355,7 +374,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	// get receipt data in case migrator is enabled
-	var receipt *iotago.Receipt
+	var receipt *iotago.ReceiptMilestoneOpt
 	if coo.migratorService != nil {
 		receipt = coo.migratorService.Receipt()
 		if receipt != nil {
@@ -382,9 +401,14 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, receipt, merkleTreeHash)
+	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, receipt, lastMilestoneID, merkleProof)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
+	}
+
+	milestoneID, err := milestoneMsg.Payload.(*iotago.Milestone).ID()
+	if err != nil {
+		return common.CriticalError(fmt.Errorf("failed to compute milestone ID: %w", err))
 	}
 
 	// rename the coordinator state file to mark the state as invalid
@@ -409,6 +433,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	coo.state.LatestMilestoneMessageID = hornet.MessageIDFromArray(*latestMilestoneMessageID)
+	coo.state.LatestMilestoneID = *milestoneID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = newMilestoneTimestamp
 
@@ -431,7 +456,7 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// only one parent references the last known milestone or NullMessageID if startIndex = 1 (see InitState)
-		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1)
+		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID)
 		if err != nil {
 			// creating milestone failed => always a critical error at bootstrap
 			return nil, common.CriticalError(err)
@@ -522,7 +547,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
-	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1); err != nil {
+	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID); err != nil {
 		// creating milestone failed => non-critical or critical error
 		return nil, err
 	}
