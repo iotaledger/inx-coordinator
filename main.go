@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/gohornet/hornet/core/gracefulshutdown"
 	"github.com/gohornet/hornet/pkg/node"
-	"github.com/gohornet/inx-coordinator/plugin/app"
-	"github.com/gohornet/inx-coordinator/plugin/coordinator"
-	"github.com/gohornet/inx-coordinator/plugin/inx"
+	"github.com/gohornet/inx-coordinator/core/app"
+	"github.com/gohornet/inx-coordinator/core/coordinator"
+	"github.com/gohornet/inx-coordinator/core/inx"
 	"github.com/gohornet/inx-coordinator/plugin/migrator"
 )
 
