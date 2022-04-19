@@ -15,6 +15,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
+	"github.com/gohornet/inx-coordinator/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	inx "github.com/iotaledger/inx/go"
@@ -29,8 +30,8 @@ type NodeBridge struct {
 	Events             *Events
 
 	isSyncedMutex      sync.RWMutex
-	latestMilestone    *inx.Milestone
-	confirmedMilestone *inx.Milestone
+	latestMilestone    *inx.MilestoneInfo
+	confirmedMilestone *inx.MilestoneInfo
 
 	enableTreasuryUpdates bool
 	treasuryOutputMutex   sync.RWMutex
@@ -129,8 +130,7 @@ func (n *NodeBridge) LatestMilestone() *coordinator.LatestMilestone {
 	defer n.isSyncedMutex.RUnlock()
 	return &coordinator.LatestMilestone{
 		Index:     milestone.Index(n.latestMilestone.GetMilestoneIndex()),
-		Timestamp: uint64(n.latestMilestone.GetMilestoneTimestamp()),
-		MessageID: hornet.MessageIDFromArray(n.latestMilestone.GetMessageId().Unwrap()),
+		Timestamp: n.latestMilestone.GetMilestoneTimestamp(),
 	}
 }
 
@@ -148,11 +148,11 @@ func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, 
 	}, nil
 }
 
-func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
+func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
 	req := &inx.WhiteFlagRequest{
 		MilestoneIndex:     uint32(msIndex),
-		MilestoneTimestamp: uint32(msTimestamp),
-		Parents:            parents.ToSliceOfSlices(),
+		MilestoneTimestamp: msTimestamp,
+		Parents:            utils.INXMessageIDsFromMessageIDs(parents),
 		LastMilestoneId:    inx.NewMilestoneId(lastMilestoneID),
 	}
 
@@ -162,11 +162,11 @@ func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex mileston
 	}
 
 	proof := &coordinator.MilestoneMerkleProof{
-		PastConeMerkleProof:  &coordinator.MerkleTreeHash{},
-		InclusionMerkleProof: &coordinator.MerkleTreeHash{},
+		ConfirmedMerkleRoot: &coordinator.MerkleTreeHash{},
+		AppliedMerkleRoot:   &coordinator.MerkleTreeHash{},
 	}
-	copy(proof.PastConeMerkleProof[:], res.GetMilestonePastConeMerkleProof())
-	copy(proof.InclusionMerkleProof[:], res.GetMilestoneInclusionMerkleProof())
+	copy(proof.ConfirmedMerkleRoot[:], res.GetMilestoneConfirmedMerkleRoot())
+	copy(proof.AppliedMerkleRoot[:], res.GetMilestoneAppliedMerkleRoot())
 
 	return proof, nil
 }
@@ -290,13 +290,13 @@ func (n *NodeBridge) processSolidMessage(metadata *inx.MessageMetadata) {
 
 func (n *NodeBridge) processLatestMilestone(ms *inx.Milestone) {
 	n.isSyncedMutex.Lock()
-	n.latestMilestone = ms
+	n.latestMilestone = ms.GetMilestoneInfo()
 	n.isSyncedMutex.Unlock()
 }
 
 func (n *NodeBridge) processConfirmedMilestone(ms *inx.Milestone) {
 	n.isSyncedMutex.Lock()
-	n.confirmedMilestone = ms
+	n.confirmedMilestone = ms.GetMilestoneInfo()
 	n.isSyncedMutex.Unlock()
 
 	n.TangleListener.processConfirmedMilestone(ms)

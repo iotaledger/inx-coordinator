@@ -40,5 +40,5 @@ func (t *TangleListener) processSolidMessage(metadata *inx.MessageMetadata) {
 }
 
 func (t *TangleListener) processConfirmedMilestone(ms *inx.Milestone) {
-	t.milestoneConfirmedSyncEvent.Trigger(milestone.Index(ms.GetMilestoneIndex()))
+	t.milestoneConfirmedSyncEvent.Trigger(milestone.Index(ms.GetMilestoneInfo().GetMilestoneIndex()))
 }

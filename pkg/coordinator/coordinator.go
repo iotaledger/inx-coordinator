@@ -34,9 +34,8 @@ type SendMessageFunc = func(message *iotago.Message, msIndex ...milestone.Index)
 
 type LatestMilestone struct {
 	Index       milestone.Index
-	Timestamp   uint64
+	Timestamp   uint32
 	MilestoneID iotago.MilestoneID
-	MessageID   hornet.MessageID
 }
 
 type LatestTreasuryOutput struct {
@@ -73,11 +72,11 @@ type Events struct {
 type IsNodeSyncedFunc = func() bool
 
 type MilestoneMerkleProof struct {
-	PastConeMerkleProof  *MerkleTreeHash
-	InclusionMerkleProof *MerkleTreeHash
+	ConfirmedMerkleRoot *MerkleTreeHash
+	AppliedMerkleRoot   *MerkleTreeHash
 }
 
-type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint64, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleProof, error)
+type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleProof, error)
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
@@ -288,23 +287,20 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 			return fmt.Errorf("previous milestone does not match latest milestone in node! previous: %d, database: %d", startIndex-1, latestMilestone.Index)
 		}
 
-		latestMilestoneMessageID := hornet.NullMessageID()
 		latestMilestoneID := iotago.MilestoneID{}
 		if startIndex != 1 {
 
-			if latestMilestone.MessageID.IsNullMessageID() ||
-				latestMilestone.MilestoneID == emptyMilestoneID {
-				return fmt.Errorf("previous milestone messageID and/or milestoneID should not be genesis")
+			if latestMilestone.MilestoneID == emptyMilestoneID {
+				return fmt.Errorf("previous milestone milestoneID should not be genesis")
 			}
 
 			// If we don't start a new network, the last milestone has to be referenced
-			latestMilestoneMessageID = latestMilestone.MessageID
 			latestMilestoneID = latestMilestone.MilestoneID
 		}
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
-		state.LatestMilestoneMessageID = latestMilestoneMessageID
+		state.LatestMilestoneMessageID = hornet.NullMessageID()
 		state.LatestMilestoneID = latestMilestoneID
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = time.Now()
@@ -349,7 +345,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
 	// otherwise the coordinator could panic at shutdown.
-	merkleProof, err := coo.merkleTreeHashFunc(context.Background(), newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, lastMilestoneID)
+	merkleProof, err := coo.merkleTreeHashFunc(context.Background(), newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, lastMilestoneID)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute white flag mutations: %w", err))
 	}
@@ -401,7 +397,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint64(newMilestoneTimestamp.Unix()), parents, receipt, lastMilestoneID, merkleProof)
+	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, receipt, lastMilestoneID, merkleProof)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}

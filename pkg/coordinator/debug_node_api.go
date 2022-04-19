@@ -45,29 +45,29 @@ func (api *DebugNodeAPIClient) WhiteFlag(index milestone.Index, timestamp uint32
 		return nil, err
 	}
 
-	inclusionMerkleProofBytes, err := iotago.DecodeHex(res.InclusionMerkleProof)
+	confirmedMerkleRootBytes, err := iotago.DecodeHex(res.ConfirmedMerkleRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(inclusionMerkleProofBytes) != iotago.MilestoneMerkleProofLength {
-		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(inclusionMerkleProofBytes))
+	if len(confirmedMerkleRootBytes) != iotago.MilestoneMerkleProofLength {
+		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(confirmedMerkleRootBytes))
 	}
 
-	pastConeMerkleProofBytes, err := iotago.DecodeHex(res.InclusionMerkleProof)
+	appliedMerkleRootBytes, err := iotago.DecodeHex(res.AppliedMerkleRoot)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(pastConeMerkleProofBytes) != iotago.MilestoneMerkleProofLength {
-		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(pastConeMerkleProofBytes))
+	if len(appliedMerkleRootBytes) != iotago.MilestoneMerkleProofLength {
+		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(appliedMerkleRootBytes))
 	}
 
 	merkleProof := &MilestoneMerkleProof{
-		PastConeMerkleProof:  &MerkleTreeHash{},
-		InclusionMerkleProof: &MerkleTreeHash{},
+		ConfirmedMerkleRoot: &MerkleTreeHash{},
+		AppliedMerkleRoot:   &MerkleTreeHash{},
 	}
-	copy(merkleProof.InclusionMerkleProof[:], inclusionMerkleProofBytes)
-	copy(merkleProof.PastConeMerkleProof[:], pastConeMerkleProofBytes)
+	copy(merkleProof.ConfirmedMerkleRoot[:], confirmedMerkleRootBytes)
+	copy(merkleProof.AppliedMerkleRoot[:], appliedMerkleRootBytes)
 	return merkleProof, nil
 }

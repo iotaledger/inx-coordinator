@@ -4,10 +4,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gohornet/hornet/pkg/model/hornet"
+	"github.com/gohornet/inx-coordinator/pkg/utils"
 	"github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
-	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -52,7 +54,7 @@ func newMetadata(parents hornet.MessageIDs) (*inx.MessageMetadata, hornet.Messag
 	msgID := randMessageID()
 	return &inx.MessageMetadata{
 		MessageId: inx.NewMessageId(msgID.ToArray()),
-		Parents:   parents.ToSliceOfSlices(),
+		Parents:   utils.INXMessageIDsFromMessageIDs(parents),
 		Solid:     true,
 	}, msgID
 }

@@ -3,7 +3,6 @@ package mselection
 import (
 	"container/list"
 	"context"
-	inx "github.com/iotaledger/inx/go"
 	"sync"
 	"time"
 
@@ -11,7 +10,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/utils"
+	randUtils "github.com/gohornet/hornet/pkg/utils"
+	"github.com/gohornet/inx-coordinator/pkg/utils"
+	inx "github.com/iotaledger/inx/go"
 )
 
 var (
@@ -61,7 +62,7 @@ func (il *trackedMessagesList) randomTip() (*trackedMessage, error) {
 		return nil, ErrNoTipsAvailable
 	}
 
-	randomMsgIndex := utils.RandomInsecure(0, len(il.msgs)-1)
+	randomMsgIndex := randUtils.RandomInsecure(0, len(il.msgs)-1)
 
 	for _, tip := range il.msgs {
 		randomMsgIndex--
@@ -155,7 +156,7 @@ func (s *HeaviestSelector) selectTip(tipsList *trackedMessagesList) (*trackedMes
 	}
 
 	// select a random tip from the provided slice of tips.
-	selected := best.tips[utils.RandomInsecure(0, len(best.tips)-1)]
+	selected := best.tips[randUtils.RandomInsecure(0, len(best.tips)-1)]
 
 	return selected, best.count, nil
 }
@@ -245,7 +246,7 @@ func (s *HeaviestSelector) OnNewSolidMessage(msgMeta *inx.MessageMetadata) (trac
 	defer s.Unlock()
 
 	messageID := hornet.MessageIDFromArray(msgMeta.UnwrapMessageID())
-	parents := hornet.MessageIDsFromSliceOfSlices(msgMeta.GetParents())
+	parents := utils.MessageIDsFromINXMessageIDs(msgMeta.GetParents())
 
 	// filter duplicate messages
 	if _, contains := s.trackedMessages[messageID.ToMapKey()]; contains {

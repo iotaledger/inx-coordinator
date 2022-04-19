@@ -175,8 +175,8 @@ QuorumLoop:
 			continue
 
 		case nodeMerkleTreeHash := <-nodeResultChan:
-			if cooMerkleProof.InclusionMerkleProof != nodeMerkleTreeHash.InclusionMerkleProof ||
-				cooMerkleProof.PastConeMerkleProof != nodeMerkleTreeHash.PastConeMerkleProof {
+			if cooMerkleProof.AppliedMerkleRoot != nodeMerkleTreeHash.AppliedMerkleRoot ||
+				cooMerkleProof.ConfirmedMerkleRoot != nodeMerkleTreeHash.ConfirmedMerkleRoot {
 				// mismatch of the merkle tree hash of the node => critical error
 				quorumErrChan <- common.CriticalError(ErrQuorumMerkleTreeHashMismatch)
 				return
