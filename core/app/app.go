@@ -79,7 +79,7 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 func loadCfg(flagSets map[string]*flag.FlagSet) error {
 
 	if hasFlag(flag.CommandLine, CfgConfigFilePathAppConfig) {
-		// node config file is only loaded if the flag was specified
+		// app config file is only loaded if the flag was specified
 		if err := appConfig.LoadFile(*appCfgFilePath); err != nil {
 			return fmt.Errorf("loading config file failed: %w", err)
 		}
