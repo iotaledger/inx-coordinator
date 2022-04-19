@@ -17,7 +17,7 @@ import (
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/iota.go/api"
+	legacyapi "github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -70,7 +70,7 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps validatorDeps) *validator.Validator {
-		iotaAPI, err := api.ComposeAPI(api.HTTPClientSettings{
+		legacyAPI, err := legacyapi.ComposeAPI(legacyapi.HTTPClientSettings{
 			URI:    deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress),
 			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
@@ -78,7 +78,7 @@ func provide(c *dig.Container) {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return validator.NewValidator(
-			iotaAPI,
+			legacyAPI,
 			deps.NodeConfig.String(CfgReceiptsValidatorCoordinatorAddress),
 			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
 		)
