@@ -71,12 +71,12 @@ type Events struct {
 
 type IsNodeSyncedFunc = func() bool
 
-type MilestoneMerkleProof struct {
+type MilestoneMerkleRoots struct {
 	ConfirmedMerkleRoot *MerkleTreeHash
 	AppliedMerkleRoot   *MerkleTreeHash
 }
 
-type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleProof, error)
+type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
 
 // Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
@@ -284,7 +284,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 		}
 
 		if latestMilestone.Index != startIndex-1 {
-			return fmt.Errorf("previous milestone does not match latest milestone in node! previous: %d, database: %d", startIndex-1, latestMilestone.Index)
+			return fmt.Errorf("previous milestone does not match latest milestone in node! previous: %d, INX: %d", startIndex-1, latestMilestone.Index)
 		}
 
 		latestMilestoneID := iotago.MilestoneID{}
@@ -308,7 +308,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 		coo.state = state
 		coo.bootstrapped = false
 
-		coo.LogInfof("bootstrapping Coordinator at %d", startIndex)
+		coo.LogInfof("bootstrapping coordinator at %d", startIndex)
 
 		return nil
 	}
@@ -326,7 +326,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 		return fmt.Errorf("previous milestone does not match latest milestone in node. previous: %d, INX: %d", coo.state.LatestMilestoneIndex, latestMilestone.Index)
 	}
 
-	coo.LogInfof("resuming Coordinator at %d", latestMilestone.Index)
+	coo.LogInfof("resuming coordinator at %d", latestMilestone.Index)
 
 	coo.bootstrapped = true
 	return nil

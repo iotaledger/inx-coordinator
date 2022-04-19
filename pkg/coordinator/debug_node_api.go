@@ -30,7 +30,7 @@ type DebugNodeAPIClient struct {
 
 // WhiteFlag is the debug route to compute the white flag confirmation for the cone of the given parents.
 // This function returns the merkle tree hash calculated by the node.
-func (api *DebugNodeAPIClient) WhiteFlag(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleProof, error) {
+func (api *DebugNodeAPIClient) WhiteFlag(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error) {
 
 	req := &debug.ComputeWhiteFlagMutationsRequest{
 		Index:           index,
@@ -51,7 +51,7 @@ func (api *DebugNodeAPIClient) WhiteFlag(index milestone.Index, timestamp uint32
 	}
 
 	if len(confirmedMerkleRootBytes) != iotago.MilestoneMerkleProofLength {
-		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(confirmedMerkleRootBytes))
+		return nil, fmt.Errorf("unknown confirmed merkle tree hash length (%d)", len(confirmedMerkleRootBytes))
 	}
 
 	appliedMerkleRootBytes, err := iotago.DecodeHex(res.AppliedMerkleRoot)
@@ -60,10 +60,10 @@ func (api *DebugNodeAPIClient) WhiteFlag(index milestone.Index, timestamp uint32
 	}
 
 	if len(appliedMerkleRootBytes) != iotago.MilestoneMerkleProofLength {
-		return nil, fmt.Errorf("unknown merkle tree hash length (%d)", len(appliedMerkleRootBytes))
+		return nil, fmt.Errorf("unknown applied merkle tree hash length (%d)", len(appliedMerkleRootBytes))
 	}
 
-	merkleProof := &MilestoneMerkleProof{
+	merkleProof := &MilestoneMerkleRoots{
 		ConfirmedMerkleRoot: &MerkleTreeHash{},
 		AppliedMerkleRoot:   &MerkleTreeHash{},
 	}

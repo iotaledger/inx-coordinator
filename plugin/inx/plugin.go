@@ -11,6 +11,7 @@ import (
 
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/plugin/migrator"
 	"github.com/iotaledger/hive.go/configuration"
@@ -90,7 +91,7 @@ func run() {
 		deps.NodeBridge.Start(ctx)
 		<-ctx.Done()
 		deps.Connection.Close()
-	}, shutdown.PriorityCloseDatabase); err != nil {
+	}, daemon.PriorityDisconnectINX); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

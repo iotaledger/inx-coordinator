@@ -117,7 +117,7 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Durat
 // Returns non-critical and critical errors.
 // If no node of the group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleProof,
+func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleRoots,
 	groupName string,
 	quorumGroupEntries []*quorumGroupEntry,
 	wg *sync.WaitGroup,
@@ -137,11 +137,11 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleP
 
 	// create buffered channels, so the go routines will not be dangling if no receiver waits for the results anymore
 	// garbage collector will take care if the channels are not used anymore. no need to close manually
-	nodeResultChan := make(chan *MilestoneMerkleProof, len(quorumGroupEntries))
+	nodeResultChan := make(chan *MilestoneMerkleRoots, len(quorumGroupEntries))
 	nodeErrorChan := make(chan error, len(quorumGroupEntries))
 
 	for _, entry := range quorumGroupEntries {
-		go func(entry *quorumGroupEntry, nodeResultChan chan *MilestoneMerkleProof, nodeErrorChan chan error) {
+		go func(entry *quorumGroupEntry, nodeResultChan chan *MilestoneMerkleRoots, nodeErrorChan chan error) {
 			ts := time.Now()
 
 			nodeMerkleTreeHash, err := entry.api.WhiteFlag(index, timestamp, parents, lastMilestoneID)
@@ -199,7 +199,7 @@ QuorumLoop:
 // Returns non-critical and critical errors.
 // If no node of a certain group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
-func (q *quorum) checkMerkleTreeHash(cooMerkleProof *MilestoneMerkleProof,
+func (q *quorum) checkMerkleTreeHash(cooMerkleProof *MilestoneMerkleRoots,
 	index milestone.Index,
 	timestamp uint32,
 	parents hornet.MessageIDs,

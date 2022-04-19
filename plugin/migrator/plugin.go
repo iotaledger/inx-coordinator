@@ -13,6 +13,7 @@ import (
 	"github.com/gohornet/hornet/pkg/model/utxo"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
+	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -143,7 +144,7 @@ func run() {
 			return timeutil.Sleep(ctx, deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod))
 		})
 		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
-	}, shutdown.PriorityMigrator); err != nil {
+	}, daemon.PriorityStopMigrator); err != nil {
 		Plugin.LogPanicf("failed to start worker: %s", err)
 	}
 }

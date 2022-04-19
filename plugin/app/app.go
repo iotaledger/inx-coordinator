@@ -14,6 +14,9 @@ import (
 )
 
 var (
+	// Version of the app.
+	Version = "0.1.0"
+
 	// configs
 	nodeConfig = configuration.New()
 
@@ -30,6 +33,7 @@ func init() {
 			Name:           "App",
 			Params:         params,
 			InitConfigPars: initConfigPars,
+			Configure:      configure,
 		},
 		Configs: map[string]*configuration.Configuration{
 			"nodeConfig": nodeConfig,
@@ -53,10 +57,16 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 	if err = loadCfg(configFlagSets); err != nil {
 		return nil, err
 	}
+
+	if err = nodeConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
+		panic(err)
+	}
+
 	if err := logger.InitGlobalLogger(nodeConfig); err != nil {
 		panic(err)
 	}
 
+	fmt.Printf("inx-coordinator v%s\n", Version)
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{
@@ -163,4 +173,8 @@ func initConfigPars(c *dig.Container) {
 	}); err != nil {
 		InitPlugin.LogPanic(err)
 	}
+}
+
+func configure() {
+	InitPlugin.LogInfo("Loading plugins ...")
 }

@@ -148,7 +148,7 @@ func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, 
 	}, nil
 }
 
-func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleProof, error) {
+func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 	req := &inx.WhiteFlagRequest{
 		MilestoneIndex:     uint32(msIndex),
 		MilestoneTimestamp: msTimestamp,
@@ -161,7 +161,7 @@ func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex mileston
 		return nil, err
 	}
 
-	proof := &coordinator.MilestoneMerkleProof{
+	proof := &coordinator.MilestoneMerkleRoots{
 		ConfirmedMerkleRoot: &coordinator.MerkleTreeHash{},
 		AppliedMerkleRoot:   &coordinator.MerkleTreeHash{},
 	}

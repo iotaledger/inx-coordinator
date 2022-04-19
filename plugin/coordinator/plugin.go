@@ -19,6 +19,7 @@ import (
 	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
+	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/gohornet/inx-coordinator/pkg/mselection"
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
@@ -249,7 +250,7 @@ func run() {
 			}
 		}, deps.Coordinator.Interval(), ctx)
 		ticker.WaitForGracefulShutdown()
-	}, shutdown.PriorityCoordinator); err != nil {
+	}, daemon.PriorityStopCoordinatorMilestoneTicker); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 
@@ -372,7 +373,7 @@ func run() {
 		}
 
 		detachEvents()
-	}, shutdown.PriorityCoordinator); err != nil {
+	}, daemon.PriorityStopCoordinator); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)
 	}
 

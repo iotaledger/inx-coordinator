@@ -33,7 +33,7 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Mes
 }
 
 // createMilestone creates a signed milestone message.
-func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, lastMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleProof) (*iotago.Message, error) {
+func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, lastMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Message, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
