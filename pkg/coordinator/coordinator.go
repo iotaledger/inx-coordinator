@@ -242,6 +242,10 @@ func New(
 	options.apply(defaultOptions...)
 	options.apply(opts...)
 
+	if migratorService != nil && treasuryOutputFunc == nil {
+		return nil, common.CriticalError(errors.New("migrator configured, but no treasury output fetch function provided"))
+	}
+
 	result := &Coordinator{
 		merkleTreeHashFunc: merkleTreeHashFunc,
 		isNodeSynced:       nodeSyncedFunc,
@@ -376,10 +380,6 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		if receipt != nil {
 			if err := coo.migratorService.PersistState(true); err != nil {
 				return common.CriticalError(fmt.Errorf("unable to persist migrator state before send: %w", err))
-			}
-
-			if coo.treasuryOutputFunc == nil {
-				return common.CriticalError(errors.New("unable to fetch unspent treasury output: no fetch function configured"))
 			}
 
 			currentTreasuryOutput, err := coo.treasuryOutputFunc()
