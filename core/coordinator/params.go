@@ -48,7 +48,7 @@ const (
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
+		"appConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgCoordinatorStateFilePath, "coordinator.state", "the path to the state file of the coordinator")
 			fs.Duration(CfgCoordinatorInterval, 10*time.Second, "the interval milestones are issued")

@@ -88,7 +88,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	AppConfig       *configuration.Configuration `name:"appConfig"`
 	Coordinator     *coordinator.Coordinator
 	Selector        *mselection.HeaviestSelector
 	NodeBridge      *nodebridge.NodeBridge
@@ -99,16 +99,16 @@ func provide(c *dig.Container) {
 
 	type selectorDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func(deps selectorDeps) *mselection.HeaviestSelector {
 		// use the heaviest branch tip selection for the milestones
 		return mselection.New(
-			deps.NodeConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
-			deps.NodeConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-			deps.NodeConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-			deps.NodeConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
+			deps.AppConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold),
+			deps.AppConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
+			deps.AppConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
+			deps.AppConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
 		)
 	}); err != nil {
 		CorePlugin.LogPanic(err)
@@ -117,7 +117,7 @@ func provide(c *dig.Container) {
 	type coordinatorDeps struct {
 		dig.In
 		MigratorService *migrator.MigratorService    `optional:"true"`
-		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+		AppConfig       *configuration.Configuration `name:"appConfig"`
 		NodeBridge      *nodebridge.NodeBridge
 	}
 
@@ -126,8 +126,8 @@ func provide(c *dig.Container) {
 		initCoordinator := func() (*coordinator.Coordinator, error) {
 
 			signingProvider, err := initSigningProvider(
-				deps.NodeConfig.String(CfgCoordinatorSigningProvider),
-				deps.NodeConfig.String(CfgCoordinatorSigningRemoteAddress),
+				deps.AppConfig.String(CfgCoordinatorSigningProvider),
+				deps.AppConfig.String(CfgCoordinatorSigningRemoteAddress),
 				deps.NodeBridge.KeyManager(),
 				deps.NodeBridge.MilestonePublicKeyCount(),
 			)
@@ -135,12 +135,12 @@ func provide(c *dig.Container) {
 				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
 			}
 
-			quorumGroups, err := initQuorumGroups(deps.NodeConfig)
+			quorumGroups, err := initQuorumGroups(deps.AppConfig)
 			if err != nil {
 				return nil, fmt.Errorf("failed to initialize coordinator quorum: %s", err)
 			}
 
-			if deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled) {
+			if deps.AppConfig.Bool(CfgCoordinatorQuorumEnabled) {
 				CorePlugin.LogInfo("running Coordinator with quorum enabled")
 			}
 
@@ -161,12 +161,12 @@ func provide(c *dig.Container) {
 				powHandler,
 				sendMessage,
 				coordinator.WithLogger(CorePlugin.Logger()),
-				coordinator.WithStateFilePath(deps.NodeConfig.String(CfgCoordinatorStateFilePath)),
-				coordinator.WithMilestoneInterval(deps.NodeConfig.Duration(CfgCoordinatorInterval)),
-				coordinator.WithPoWWorkerCount(deps.NodeConfig.Int(CfgCoordinatorPoWWorkerCount)),
-				coordinator.WithQuorum(deps.NodeConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.NodeConfig.Duration(CfgCoordinatorQuorumTimeout)),
-				coordinator.WithSigningRetryAmount(deps.NodeConfig.Int(CfgCoordinatorSigningRetryAmount)),
-				coordinator.WithSigningRetryTimeout(deps.NodeConfig.Duration(CfgCoordinatorSigningRetryTimeout)),
+				coordinator.WithStateFilePath(deps.AppConfig.String(CfgCoordinatorStateFilePath)),
+				coordinator.WithMilestoneInterval(deps.AppConfig.Duration(CfgCoordinatorInterval)),
+				coordinator.WithPoWWorkerCount(deps.AppConfig.Int(CfgCoordinatorPoWWorkerCount)),
+				coordinator.WithQuorum(deps.AppConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.AppConfig.Duration(CfgCoordinatorQuorumTimeout)),
+				coordinator.WithSigningRetryAmount(deps.AppConfig.Int(CfgCoordinatorSigningRetryAmount)),
+				coordinator.WithSigningRetryTimeout(deps.AppConfig.Duration(CfgCoordinatorSigningRetryTimeout)),
 			)
 			if err != nil {
 				return nil, err
@@ -209,7 +209,7 @@ func configure() {
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
 
-	maxTrackedMessages = deps.NodeConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
+	maxTrackedMessages = deps.AppConfig.Int(CfgCoordinatorCheckpointsMaxTrackedMessages)
 
 	configureEvents()
 }
@@ -412,14 +412,14 @@ func initSigningProvider(signingProviderType string, remoteEndpoint string, keyM
 	}
 }
 
-func initQuorumGroups(nodeConfig *configuration.Configuration) (map[string][]*coordinator.QuorumClientConfig, error) {
+func initQuorumGroups(appConfig *configuration.Configuration) (map[string][]*coordinator.QuorumClientConfig, error) {
 	// parse quorum groups config
 	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
-	for _, groupName := range nodeConfig.MapKeys(CfgCoordinatorQuorumGroups) {
+	for _, groupName := range appConfig.MapKeys(CfgCoordinatorQuorumGroups) {
 		configKey := CfgCoordinatorQuorumGroups + "." + groupName
 
 		groupConfig := []*coordinator.QuorumClientConfig{}
-		if err := nodeConfig.Unmarshal(configKey, &groupConfig); err != nil {
+		if err := appConfig.Unmarshal(configKey, &groupConfig); err != nil {
 			return nil, fmt.Errorf("failed to parse group: %s, %s", configKey, err)
 		}
 

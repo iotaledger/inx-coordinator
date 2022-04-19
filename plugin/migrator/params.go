@@ -30,7 +30,7 @@ const (
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
+		"appConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgMigratorStateFilePath, "migrator.state", "path to the state file of the migrator")
 			fs.Int(CfgMigratorReceiptMaxEntries, migrator.SensibleMaxEntriesCount, "the max amount of entries to embed within a receipt")

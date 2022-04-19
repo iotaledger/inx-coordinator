@@ -18,11 +18,11 @@ var (
 	Version = "0.1.0"
 
 	// configs
-	nodeConfig = configuration.New()
+	appConfig = configuration.New()
 
 	// config file flags
 	configFilesFlagSet = flag.NewFlagSet("config_files", flag.ContinueOnError)
-	nodeCfgFilePath    = configFilesFlagSet.StringP(CfgConfigFilePathNodeConfig, "c", "config.json", "file path of the config file")
+	nodeCfgFilePath    = configFilesFlagSet.StringP(CfgConfigFilePathAppConfig, "c", "config.json", "file path of the config file")
 
 	InitPlugin *node.InitPlugin
 )
@@ -36,7 +36,7 @@ func init() {
 			Configure:      configure,
 		},
 		Configs: map[string]*configuration.Configuration{
-			"nodeConfig": nodeConfig,
+			"appConfig": appConfig,
 		},
 		Init: initialize,
 	}
@@ -58,11 +58,11 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 		return nil, err
 	}
 
-	if err = nodeConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
+	if err = appConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
 		panic(err)
 	}
 
-	if err := logger.InitGlobalLogger(nodeConfig); err != nil {
+	if err := logger.InitGlobalLogger(appConfig); err != nil {
 		panic(err)
 	}
 
@@ -70,33 +70,33 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 	printConfig(maskedKeys)
 
 	return &node.InitConfig{
-		EnabledPlugins:  nodeConfig.Strings(CfgNodeEnablePlugins),
-		DisabledPlugins: nodeConfig.Strings(CfgNodeDisablePlugins),
+		EnabledPlugins:  appConfig.Strings(CfgAppEnablePlugins),
+		DisabledPlugins: appConfig.Strings(CfgAppDisablePlugins),
 	}, nil
 }
 
 // parses the configuration and initializes the global logger.
 func loadCfg(flagSets map[string]*flag.FlagSet) error {
 
-	if hasFlag(flag.CommandLine, CfgConfigFilePathNodeConfig) {
+	if hasFlag(flag.CommandLine, CfgConfigFilePathAppConfig) {
 		// node config file is only loaded if the flag was specified
-		if err := nodeConfig.LoadFile(*nodeCfgFilePath); err != nil {
+		if err := appConfig.LoadFile(*nodeCfgFilePath); err != nil {
 			return fmt.Errorf("loading config file failed: %w", err)
 		}
 	}
 
 	// load the flags to set the default values
-	if err := nodeConfig.LoadFlagSet(flagSets["nodeConfig"]); err != nil {
+	if err := appConfig.LoadFlagSet(flagSets["appConfig"]); err != nil {
 		return err
 	}
 
 	// load the env vars after default values from flags were set (otherwise the env vars are not added because the keys don't exist)
-	if err := nodeConfig.LoadEnvironmentVars(""); err != nil {
+	if err := appConfig.LoadEnvironmentVars(""); err != nil {
 		return err
 	}
 
 	// load the flags again to overwrite env vars that were also set via command line
-	if err := nodeConfig.LoadFlagSet(flagSets["nodeConfig"]); err != nil {
+	if err := appConfig.LoadFlagSet(flagSets["appConfig"]); err != nil {
 		return err
 	}
 
@@ -120,10 +120,10 @@ func getList(a []string) string {
 
 // prints the loaded configuration, but hides sensitive information.
 func printConfig(maskedKeys []string) {
-	nodeConfig.Print(maskedKeys)
+	appConfig.Print(maskedKeys)
 
-	enablePlugins := nodeConfig.Strings(CfgNodeEnablePlugins)
-	disablePlugins := nodeConfig.Strings(CfgNodeDisablePlugins)
+	enablePlugins := appConfig.Strings(CfgAppEnablePlugins)
+	disablePlugins := appConfig.Strings(CfgAppDisablePlugins)
 
 	if len(enablePlugins) > 0 || len(disablePlugins) > 0 {
 		if len(enablePlugins) > 0 {
@@ -163,12 +163,12 @@ func initConfigPars(c *dig.Container) {
 
 	type cfgResult struct {
 		dig.Out
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func() cfgResult {
 		return cfgResult{
-			NodeConfig: nodeConfig,
+			AppConfig: appConfig,
 		}
 	}); err != nil {
 		InitPlugin.LogPanic(err)

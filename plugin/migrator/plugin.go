@@ -56,7 +56,7 @@ var (
 type dependencies struct {
 	dig.In
 	UTXOManager     *utxo.Manager
-	NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+	AppConfig       *configuration.Configuration `name:"appConfig"`
 	MigratorService *migrator.MigratorService
 	ShutdownHandler *shutdown.ShutdownHandler
 }
@@ -66,21 +66,21 @@ func provide(c *dig.Container) {
 
 	type validatorDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
+		AppConfig *configuration.Configuration `name:"appConfig"`
 	}
 
 	if err := c.Provide(func(deps validatorDeps) *validator.Validator {
 		legacyAPI, err := legacyapi.ComposeAPI(legacyapi.HTTPClientSettings{
-			URI:    deps.NodeConfig.String(CfgReceiptsValidatorAPIAddress),
-			Client: &http.Client{Timeout: deps.NodeConfig.Duration(CfgReceiptsValidatorAPITimeout)},
+			URI:    deps.AppConfig.String(CfgReceiptsValidatorAPIAddress),
+			Client: &http.Client{Timeout: deps.AppConfig.Duration(CfgReceiptsValidatorAPITimeout)},
 		})
 		if err != nil {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
 		return validator.NewValidator(
 			legacyAPI,
-			deps.NodeConfig.String(CfgReceiptsValidatorCoordinatorAddress),
-			deps.NodeConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
+			deps.AppConfig.String(CfgReceiptsValidatorCoordinatorAddress),
+			deps.AppConfig.Int(CfgReceiptsValidatorCoordinatorMerkleTreeDepth),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -88,13 +88,13 @@ func provide(c *dig.Container) {
 
 	type serviceDeps struct {
 		dig.In
-		NodeConfig *configuration.Configuration `name:"nodeConfig"`
-		Validator  *validator.Validator
+		AppConfig *configuration.Configuration `name:"appConfig"`
+		Validator *validator.Validator
 	}
 
 	if err := c.Provide(func(deps serviceDeps) *migrator.MigratorService {
 
-		maxReceiptEntries := deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries)
+		maxReceiptEntries := deps.AppConfig.Int(CfgMigratorReceiptMaxEntries)
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
 			Plugin.LogPanicf("%s (set to %d) can be max %d", CfgMigratorReceiptMaxEntries, maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
@@ -104,8 +104,8 @@ func provide(c *dig.Container) {
 
 		return migrator.NewService(
 			deps.Validator,
-			deps.NodeConfig.String(CfgMigratorStateFilePath),
-			deps.NodeConfig.Int(CfgMigratorReceiptMaxEntries),
+			deps.AppConfig.String(CfgMigratorStateFilePath),
+			deps.AppConfig.Int(CfgMigratorReceiptMaxEntries),
 		)
 	}); err != nil {
 		Plugin.LogPanic(err)
@@ -141,7 +141,7 @@ func run() {
 
 			// lets just log the err and halt querying for a configured period
 			Plugin.LogWarn(err)
-			return timeutil.Sleep(ctx, deps.NodeConfig.Duration(CfgMigratorQueryCooldownPeriod))
+			return timeutil.Sleep(ctx, deps.AppConfig.Duration(CfgMigratorQueryCooldownPeriod))
 		})
 		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, daemon.PriorityStopMigrator); err != nil {

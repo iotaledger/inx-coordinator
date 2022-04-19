@@ -13,7 +13,7 @@ const (
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
+		"appConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
 			fs.String(CfgINXAddress, "localhost:9029", "the INX address to which to connect to")
 			return fs

@@ -32,7 +32,7 @@ func init() {
 
 type dependencies struct {
 	dig.In
-	NodeConfig *configuration.Configuration `name:"nodeConfig"`
+	AppConfig  *configuration.Configuration `name:"appConfig"`
 	NodeBridge *nodebridge.NodeBridge
 	Connection *grpc.ClientConn
 }
@@ -46,7 +46,7 @@ func provide(c *dig.Container) {
 
 	type inxDeps struct {
 		dig.In
-		NodeConfig      *configuration.Configuration `name:"nodeConfig"`
+		AppConfig       *configuration.Configuration `name:"appConfig"`
 		ShutdownHandler *shutdown.ShutdownHandler
 	}
 
@@ -57,7 +57,7 @@ func provide(c *dig.Container) {
 	}
 
 	if err := c.Provide(func(deps inxDeps) (inxDepsOut, error) {
-		conn, err := grpc.Dial(deps.NodeConfig.String(CfgINXAddress),
+		conn, err := grpc.Dial(deps.AppConfig.String(CfgINXAddress),
 			grpc.WithChainUnaryInterceptor(grpc_retry.UnaryClientInterceptor(), grpc_prometheus.UnaryClientInterceptor),
 			grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),

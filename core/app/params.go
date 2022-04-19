@@ -7,20 +7,20 @@ import (
 )
 
 const (
-	// CfgNodeDisablePlugins defines a list of plugins that shall be disabled
-	CfgNodeDisablePlugins = "node.disablePlugins"
-	// CfgNodeEnablePlugins defines a list of plugins that shall be enabled
-	CfgNodeEnablePlugins = "node.enablePlugins"
+	// CfgAppDisablePlugins defines a list of plugins that shall be disabled
+	CfgAppDisablePlugins = "app.disablePlugins"
+	// CfgAppEnablePlugins defines a list of plugins that shall be enabled
+	CfgAppEnablePlugins = "app.enablePlugins"
 
-	CfgConfigFilePathNodeConfig = "config"
+	CfgConfigFilePathAppConfig = "config"
 )
 
 var params = &node.PluginParams{
 	Params: map[string]*flag.FlagSet{
-		"nodeConfig": func() *flag.FlagSet {
+		"appConfig": func() *flag.FlagSet {
 			fs := flag.NewFlagSet("", flag.ContinueOnError)
-			fs.StringSlice(CfgNodeDisablePlugins, nil, "a list of plugins that shall be disabled")
-			fs.StringSlice(CfgNodeEnablePlugins, nil, "a list of plugins that shall be enabled")
+			fs.StringSlice(CfgAppDisablePlugins, nil, "a list of plugins that shall be disabled")
+			fs.StringSlice(CfgAppEnablePlugins, nil, "a list of plugins that shall be enabled")
 			return fs
 		}(),
 	},
