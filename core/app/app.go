@@ -58,9 +58,7 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 		return nil, err
 	}
 
-	if err = appConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
-		panic(err)
-	}
+	setDefaultLoggerConfig(appConfig)
 
 	if err := logger.InitGlobalLogger(appConfig); err != nil {
 		panic(err)
@@ -73,6 +71,22 @@ func initialize(params map[string][]*flag.FlagSet, maskedKeys []string) (*node.I
 		EnabledPlugins:  appConfig.Strings(CfgAppEnablePlugins),
 		DisabledPlugins: appConfig.Strings(CfgAppDisablePlugins),
 	}, nil
+}
+
+func setDefaultLoggerConfig(appConfig *configuration.Configuration) {
+	var err error
+	if err = appConfig.SetDefault(logger.ConfigurationKeyLevel, "info"); err != nil {
+		panic(err)
+	}
+	if err = appConfig.SetDefault(logger.ConfigurationKeyDisableCaller, true); err != nil {
+		panic(err)
+	}
+	if err = appConfig.SetDefault(logger.ConfigurationKeyEncoding, "console"); err != nil {
+		panic(err)
+	}
+	if err = appConfig.SetDefault(logger.ConfigurationKeyOutputPaths, []string{"stdout"}); err != nil {
+		panic(err)
+	}
 }
 
 // parses the configuration and initializes the global logger.
