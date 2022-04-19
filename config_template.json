@@ -1,6 +1,6 @@
 {
   "inx": {
-    "bindAddress": "localhost:9029"
+    "address": "localhost:9029"
   },
   "coordinator": {
     "stateFilePath": "coordinator.state",
