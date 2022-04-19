@@ -533,8 +533,8 @@ func configureEvents() {
 		CorePlugin.LogInfof("checkpoint (%d) message issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, messageID.ToHex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index milestone.Index, messageID hornet.MessageID) {
-		CorePlugin.LogInfof("milestone issued (%d): %v", index, messageID.ToHex())
+	onIssuedMilestone = events.NewClosure(func(index milestone.Index, milestoneID iotago.MilestoneID, messageID hornet.MessageID) {
+		CorePlugin.LogInfof("milestone issued (%d) MilestoneID: %s, MessageID: %v", index, iotago.EncodeHex(milestoneID[:]), messageID.ToHex())
 	})
 }
 

@@ -22,7 +22,7 @@ var (
 
 	// config file flags
 	configFilesFlagSet = flag.NewFlagSet("config_files", flag.ContinueOnError)
-	nodeCfgFilePath    = configFilesFlagSet.StringP(CfgConfigFilePathAppConfig, "c", "config.json", "file path of the config file")
+	appCfgFilePath     = configFilesFlagSet.StringP(CfgConfigFilePathAppConfig, "c", "config.json", "file path of the config file")
 
 	InitPlugin *node.InitPlugin
 )
@@ -80,7 +80,7 @@ func loadCfg(flagSets map[string]*flag.FlagSet) error {
 
 	if hasFlag(flag.CommandLine, CfgConfigFilePathAppConfig) {
 		// node config file is only loaded if the flag was specified
-		if err := appConfig.LoadFile(*nodeCfgFilePath); err != nil {
+		if err := appConfig.LoadFile(*appCfgFilePath); err != nil {
 			return fmt.Errorf("loading config file failed: %w", err)
 		}
 	}

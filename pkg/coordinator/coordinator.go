@@ -437,7 +437,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 
-	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneMessageID)
+	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneID, coo.state.LatestMilestoneMessageID)
 
 	return nil
 }
