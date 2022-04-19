@@ -141,11 +141,11 @@ func provide(c *dig.Container) {
 			}
 
 			if deps.AppConfig.Bool(CfgCoordinatorQuorumEnabled) {
-				CorePlugin.LogInfo("running Coordinator with quorum enabled")
+				CorePlugin.LogInfo("running coordinator with quorum enabled")
 			}
 
 			if deps.MigratorService == nil {
-				CorePlugin.LogInfo("running Coordinator without migration enabled")
+				CorePlugin.LogInfo("running coordinator without migration enabled")
 			}
 
 			powHandler := pow.New(float64(deps.NodeBridge.ProtocolParameters.GetMinPoWScore()), 5*time.Second)
@@ -240,7 +240,7 @@ func run() {
 
 	// create a background worker that signals to issue new milestones
 	if err := CorePlugin.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(ctx context.Context) {
-
+		CorePlugin.LogInfo("Start MilestoneTicker")
 		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
 			select {

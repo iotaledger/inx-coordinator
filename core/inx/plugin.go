@@ -88,8 +88,9 @@ func provide(c *dig.Container) {
 
 func run() {
 	if err := CorePlugin.Daemon().BackgroundWorker("INX", func(ctx context.Context) {
-		deps.NodeBridge.Start(ctx)
-		<-ctx.Done()
+		CorePlugin.LogInfo("Starting NodeBridge")
+		deps.NodeBridge.Run(ctx)
+		CorePlugin.LogInfo("Stopped NodeBridge")
 		deps.Connection.Close()
 	}, daemon.PriorityDisconnectINX); err != nil {
 		CorePlugin.LogPanicf("failed to start worker: %s", err)

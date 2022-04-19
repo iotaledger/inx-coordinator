@@ -105,13 +105,16 @@ func (n *NodeBridge) KeyManager() *keymanager.KeyManager {
 	return keyManager
 }
 
-func (n *NodeBridge) Start(ctx context.Context) {
-	go n.listenToConfirmedMilestone(ctx)
-	go n.listenToLatestMilestone(ctx)
-	go n.listenToSolidMessages(ctx)
+func (n *NodeBridge) Run(ctx context.Context) {
+	c, cancel := context.WithCancel(ctx)
+	defer cancel()
+	go n.listenToConfirmedMilestone(c, cancel)
+	go n.listenToLatestMilestone(c, cancel)
+	go n.listenToSolidMessages(c, cancel)
 	if n.enableTreasuryUpdates {
-		go n.listenToTreasuryUpdates(ctx)
+		go n.listenToTreasuryUpdates(c, cancel)
 	}
+	<-c.Done()
 }
 
 func (n *NodeBridge) IsNodeSynced() bool {
@@ -186,11 +189,10 @@ func (n *NodeBridge) EmitMessage(ctx context.Context, message *iotago.Message) e
 	return nil
 }
 
-func (n *NodeBridge) listenToSolidMessages(ctx context.Context) error {
-	c, cancel := context.WithCancel(ctx)
+func (n *NodeBridge) listenToSolidMessages(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
 	filter := &inx.MessageFilter{}
-	stream, err := n.Client.ListenToSolidMessages(c, filter)
+	stream, err := n.Client.ListenToSolidMessages(ctx, filter)
 	if err != nil {
 		return err
 	}
@@ -203,7 +205,7 @@ func (n *NodeBridge) listenToSolidMessages(ctx context.Context) error {
 			n.Logger.Errorf("listenToSolidMessages: %s", err.Error())
 			break
 		}
-		if c.Err() != nil {
+		if ctx.Err() != nil {
 			break
 		}
 		n.processSolidMessage(messageMetadata)
@@ -211,10 +213,9 @@ func (n *NodeBridge) listenToSolidMessages(ctx context.Context) error {
 	return nil
 }
 
-func (n *NodeBridge) listenToLatestMilestone(ctx context.Context) error {
-	c, cancel := context.WithCancel(ctx)
+func (n *NodeBridge) listenToLatestMilestone(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
-	stream, err := n.Client.ListenToLatestMilestone(c, &inx.NoParams{})
+	stream, err := n.Client.ListenToLatestMilestone(ctx, &inx.NoParams{})
 	if err != nil {
 		return err
 	}
@@ -227,7 +228,7 @@ func (n *NodeBridge) listenToLatestMilestone(ctx context.Context) error {
 			n.Logger.Errorf("listenToLatestMilestone: %s", err.Error())
 			break
 		}
-		if c.Err() != nil {
+		if ctx.Err() != nil {
 			break
 		}
 		n.processLatestMilestone(milestone)
@@ -235,10 +236,9 @@ func (n *NodeBridge) listenToLatestMilestone(ctx context.Context) error {
 	return nil
 }
 
-func (n *NodeBridge) listenToConfirmedMilestone(ctx context.Context) error {
-	c, cancel := context.WithCancel(ctx)
+func (n *NodeBridge) listenToConfirmedMilestone(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
-	stream, err := n.Client.ListenToConfirmedMilestone(c, &inx.NoParams{})
+	stream, err := n.Client.ListenToConfirmedMilestone(ctx, &inx.NoParams{})
 	if err != nil {
 		return err
 	}
@@ -251,7 +251,7 @@ func (n *NodeBridge) listenToConfirmedMilestone(ctx context.Context) error {
 			n.Logger.Errorf("listenToConfirmedMilestone: %s", err.Error())
 			break
 		}
-		if c.Err() != nil {
+		if ctx.Err() != nil {
 			break
 		}
 		n.processConfirmedMilestone(milestone)
@@ -259,10 +259,9 @@ func (n *NodeBridge) listenToConfirmedMilestone(ctx context.Context) error {
 	return nil
 }
 
-func (n *NodeBridge) listenToTreasuryUpdates(ctx context.Context) error {
-	c, cancel := context.WithCancel(ctx)
+func (n *NodeBridge) listenToTreasuryUpdates(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
-	stream, err := n.Client.ListenToTreasuryUpdates(c, &inx.LedgerRequest{})
+	stream, err := n.Client.ListenToTreasuryUpdates(ctx, &inx.LedgerRequest{})
 	if err != nil {
 		return err
 	}
@@ -275,7 +274,7 @@ func (n *NodeBridge) listenToTreasuryUpdates(ctx context.Context) error {
 			n.Logger.Errorf("listenToTreasuryUpdates: %s", err.Error())
 			break
 		}
-		if c.Err() != nil {
+		if ctx.Err() != nil {
 			break
 		}
 		n.processTreasuryUpdate(update)
