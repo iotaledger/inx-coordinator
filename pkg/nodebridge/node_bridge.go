@@ -125,10 +125,10 @@ func (n *NodeBridge) IsNodeSynced() bool {
 	return n.latestMilestone.GetMilestoneIndex() == n.confirmedMilestone.GetMilestoneIndex()
 }
 
-func (n *NodeBridge) LatestMilestone() *coordinator.LatestMilestone {
+func (n *NodeBridge) LatestMilestone() *coordinator.LatestMilestoneInfo {
 	n.isSyncedMutex.RLock()
 	defer n.isSyncedMutex.RUnlock()
-	return &coordinator.LatestMilestone{
+	return &coordinator.LatestMilestoneInfo{
 		Index:     milestone.Index(n.latestMilestone.GetMilestoneIndex()),
 		Timestamp: n.latestMilestone.GetMilestoneTimestamp(),
 	}

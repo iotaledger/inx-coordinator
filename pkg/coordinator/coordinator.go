@@ -32,17 +32,20 @@ type BackPressureFunc func() bool
 // SendMessageFunc is a function which sends a message to the network.
 type SendMessageFunc = func(message *iotago.Message, msIndex ...milestone.Index) error
 
-type LatestMilestone struct {
+// LatestMilestoneInfo contains the info of the latest milestone the connected node knows.
+type LatestMilestoneInfo struct {
 	Index       milestone.Index
 	Timestamp   uint32
 	MilestoneID iotago.MilestoneID
 }
 
+// LatestTreasuryOutput represents the latest treasury output created by the last milestone that contained a migration
 type LatestTreasuryOutput struct {
 	MilestoneID iotago.MilestoneID
 	Amount      uint64
 }
 
+// UnspentTreasuryOutputFunc should return the latest unspent LatestTreasuryOutput
 type UnspentTreasuryOutputFunc = func() (*LatestTreasuryOutput, error)
 
 var (
@@ -69,11 +72,15 @@ type Events struct {
 	QuorumFinished *events.Event
 }
 
+// IsNodeSyncedFunc should only return true if the node connected to the coordinator is synced.
 type IsNodeSyncedFunc = func() bool
 
+// MilestoneMerkleRoots contains the merkle roots calculated by whiteflag confirmation.
 type MilestoneMerkleRoots struct {
+	// ConfirmedMerkleRoot is the root of the merkle tree containing the hash of all confirmed messages.
 	ConfirmedMerkleRoot *MerkleTreeHash
-	AppliedMerkleRoot   *MerkleTreeHash
+	// AppliedMerkleRoot is the root of the merkle tree containing the hash of all include messages that mutate the ledger.
+	AppliedMerkleRoot *MerkleTreeHash
 }
 
 type ComputeMerkleTreeHashFunc = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
@@ -272,7 +279,7 @@ func New(
 
 // InitState loads an existing state file or bootstraps the network.
 // All errors are critical.
-func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, latestMilestone *LatestMilestone) error {
+func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, latestMilestone *LatestMilestoneInfo) error {
 
 	_, err := os.Stat(coo.opts.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
