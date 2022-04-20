@@ -231,7 +231,7 @@ type Option func(opts *Options)
 
 // New creates a new coordinator instance.
 func New(
-	merkleTreeHashFunc ComputeMilestoneMerkleRoots,
+	merkleRootFunc ComputeMilestoneMerkleRoots,
 	nodeSyncedFunc IsNodeSyncedFunc,
 	networkID uint64,
 	deSeriParas *iotago.DeSerializationParameters,
@@ -251,7 +251,7 @@ func New(
 	}
 
 	result := &Coordinator{
-		merkleRootFunc:     merkleTreeHashFunc,
+		merkleRootFunc:     merkleRootFunc,
 		isNodeSynced:       nodeSyncedFunc,
 		networkID:          networkID,
 		deSeriParas:        deSeriParas,
