@@ -313,7 +313,7 @@ func (n *NodeBridge) RegisterMessageSolidEvent(ctx context.Context, messageID io
 	if err == nil {
 		if metadata.Solid {
 			// trigger the sync event, because the message is already solid
-			n.tangleListener.MessageSolidSyncEvent().Trigger(messageID)
+			n.tangleListener.processSolidMessage(metadata)
 		}
 	}
 
@@ -324,19 +324,8 @@ func (n *NodeBridge) DeregisterMessageSolidEvent(messageID iotago.MessageID) {
 	n.tangleListener.DeregisterMessageSolidEvent(messageID)
 }
 
-func (n *NodeBridge) RegisterMilestoneConfirmedEvent(ctx context.Context, msIndex milestone.Index) chan struct{} {
-	milestoneConfirmedChan := n.tangleListener.RegisterMilestoneConfirmedEvent(msIndex)
-
-	// check if the milestone is already confirmed
-	nodeStatus, err := n.Client.ReadNodeStatus(ctx, &inx.NoParams{})
-	if err == nil {
-		if milestone.Index(nodeStatus.ConfirmedMilestone.GetMilestoneIndex()) >= msIndex {
-			// trigger the sync event, because the milestone is already confirmed
-			n.tangleListener.MilestoneConfirmedSyncEvent().Trigger(msIndex)
-		}
-	}
-
-	return milestoneConfirmedChan
+func (n *NodeBridge) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
+	return n.tangleListener.RegisterMilestoneConfirmedEvent(msIndex)
 }
 
 func (n *NodeBridge) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
