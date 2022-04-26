@@ -23,11 +23,11 @@ import (
 )
 
 type NodeBridge struct {
-	Logger             *logger.Logger
-	Client             inx.INXClient
-	ProtocolParameters *inx.ProtocolParameters
-	tangleListener     *TangleListener
-	Events             *Events
+	Logger         *logger.Logger
+	Client         inx.INXClient
+	NodeConfig     *inx.NodeConfiguration
+	tangleListener *TangleListener
+	Events         *Events
 
 	isSyncedMutex      sync.RWMutex
 	latestMilestone    *inx.MilestoneInfo
@@ -58,7 +58,7 @@ func NewNodeBridge(ctx context.Context, client inx.INXClient, enableTreasuryUpda
 		return 1 * time.Second
 	}
 
-	protocolParams, err := client.ReadProtocolParameters(ctx, &inx.NoParams{}, grpc_retry.WithMax(5), grpc_retry.WithBackoff(retryBackoff))
+	nodeConfig, err := client.ReadNodeConfiguration(ctx, &inx.NoParams{}, grpc_retry.WithMax(5), grpc_retry.WithBackoff(retryBackoff))
 	if err != nil {
 		return nil, err
 	}
@@ -69,10 +69,10 @@ func NewNodeBridge(ctx context.Context, client inx.INXClient, enableTreasuryUpda
 	}
 
 	return &NodeBridge{
-		Logger:             logger,
-		Client:             client,
-		ProtocolParameters: protocolParams,
-		tangleListener:     newTangleListener(),
+		Logger:         logger,
+		Client:         client,
+		NodeConfig:     nodeConfig,
+		tangleListener: newTangleListener(),
 		Events: &Events{
 			MessageSolid:              events.NewEvent(INXMessageMetadataCaller),
 			ConfirmedMilestoneChanged: events.NewEvent(INXMilestoneCaller),
@@ -83,23 +83,13 @@ func NewNodeBridge(ctx context.Context, client inx.INXClient, enableTreasuryUpda
 	}, nil
 }
 
-func (n *NodeBridge) DeserializationParameters() *iotago.DeSerializationParameters {
-	return &iotago.DeSerializationParameters{
-		RentStructure: &iotago.RentStructure{
-			VByteCost:    n.ProtocolParameters.RentStructure.GetVByteCost(),
-			VBFactorData: iotago.VByteCostFactor(n.ProtocolParameters.RentStructure.GetVByteFactorData()),
-			VBFactorKey:  iotago.VByteCostFactor(n.ProtocolParameters.RentStructure.GetVByteFactorKey()),
-		},
-	}
-}
-
 func (n *NodeBridge) MilestonePublicKeyCount() int {
-	return int(n.ProtocolParameters.GetMilestonePublicKeyCount())
+	return int(n.NodeConfig.GetMilestonePublicKeyCount())
 }
 
 func (n *NodeBridge) KeyManager() *keymanager.KeyManager {
 	keyManager := keymanager.New()
-	for _, keyRange := range n.ProtocolParameters.GetMilestoneKeyRanges() {
+	for _, keyRange := range n.NodeConfig.GetMilestoneKeyRanges() {
 		keyManager.AddKeyRange(keyRange.GetPublicKey(), milestone.Index(keyRange.GetStartIndex()), milestone.Index(keyRange.GetEndIndex()))
 	}
 	return keyManager
@@ -151,12 +141,12 @@ func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, 
 	}, nil
 }
 
-func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, lastMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
+func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 	req := &inx.WhiteFlagRequest{
-		MilestoneIndex:     uint32(msIndex),
-		MilestoneTimestamp: msTimestamp,
-		Parents:            utils.INXMessageIDsFromMessageIDs(parents),
-		LastMilestoneId:    inx.NewMilestoneId(lastMilestoneID),
+		MilestoneIndex:      uint32(msIndex),
+		MilestoneTimestamp:  msTimestamp,
+		Parents:             utils.INXMessageIDsFromMessageIDs(parents),
+		PreviousMilestoneId: inx.NewMilestoneId(previousMilestoneId),
 	}
 
 	res, err := n.Client.ComputeWhiteFlag(ctx, req)

@@ -149,8 +149,7 @@ func provide(c *dig.Container) {
 			coo, err := coordinator.New(
 				deps.NodeBridge.ComputeMerkleTreeHash,
 				deps.NodeBridge.IsNodeSynced,
-				iotago.NetworkIDFromString(deps.NodeBridge.ProtocolParameters.GetNetworkName()),
-				deps.NodeBridge.DeserializationParameters(),
+				deps.NodeBridge.NodeConfig.UnwrapProtocolParameters(),
 				signingProvider,
 				deps.MigratorService,
 				deps.NodeBridge.LatestTreasuryOutput,
