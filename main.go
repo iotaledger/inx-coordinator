@@ -6,7 +6,7 @@ import (
 	"github.com/gohornet/inx-coordinator/core/app"
 	"github.com/gohornet/inx-coordinator/core/coordinator"
 	"github.com/gohornet/inx-coordinator/core/inx"
-	"github.com/gohornet/inx-coordinator/plugin/migrator"
+	"github.com/gohornet/inx-coordinator/plugins/migrator"
 )
 
 func main() {
