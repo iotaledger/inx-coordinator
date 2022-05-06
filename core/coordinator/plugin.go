@@ -3,6 +3,8 @@ package coordinator
 import (
 	"crypto/ed25519"
 	"fmt"
+	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -15,7 +17,6 @@ import (
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/hornet/pkg/node"
 	"github.com/gohornet/hornet/pkg/shutdown"
-	"github.com/gohornet/hornet/pkg/utils"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
@@ -23,6 +24,7 @@ import (
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/pkg/todo"
 	"github.com/iotaledger/hive.go/configuration"
+	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
@@ -372,11 +374,36 @@ func run() {
 
 }
 
+// loadEd25519PrivateKeysFromEnvironment loads ed25519 private keys from the given environment variable.
+func loadEd25519PrivateKeysFromEnvironment(name string) ([]ed25519.PrivateKey, error) {
+
+	keys, exists := os.LookupEnv(name)
+	if !exists {
+		return nil, fmt.Errorf("environment variable '%s' not set", name)
+	}
+
+	if len(keys) == 0 {
+		return nil, fmt.Errorf("environment variable '%s' not set", name)
+	}
+
+	var privateKeys []ed25519.PrivateKey
+	for _, key := range strings.Split(keys, ",") {
+		privateKey, err := crypto.ParseEd25519PrivateKeyFromString(key)
+		if err != nil {
+			return nil, fmt.Errorf("environment variable '%s' contains an invalid private key '%s'", name, key)
+
+		}
+		privateKeys = append(privateKeys, privateKey)
+	}
+
+	return privateKeys, nil
+}
+
 func initSigningProvider(signingProviderType string, remoteEndpoint string, keyManager *keymanager.KeyManager, milestonePublicKeyCount int) (coordinator.MilestoneSignerProvider, error) {
 
 	switch signingProviderType {
 	case "local":
-		privateKeys, err := utils.LoadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
+		privateKeys, err := loadEd25519PrivateKeysFromEnvironment("COO_PRV_KEYS")
 		if err != nil {
 			return nil, err
 		}
@@ -462,13 +489,13 @@ func sendMessage(message *iotago.Message, msIndex ...milestone.Index) (hornet.Me
 	}()
 
 	// wait until the message is solid
-	if err = utils.WaitForChannelClosed(context.Background(), msgSolidEventChan); err != nil {
+	if err = events.WaitForChannelClosed(context.Background(), msgSolidEventChan); err != nil {
 		return nil, err
 	}
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
-		if err = utils.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
+		if err = events.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
 			return nil, err
 		}
 	}

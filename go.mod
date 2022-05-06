@@ -7,7 +7,7 @@ require (
 	github.com/gohornet/hornet v1.1.0-rc1.0.20220427161241-307b6de4d95d
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
-	github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5
+	github.com/iotaledger/hive.go v0.0.0-20220506133510-ef2e113d6665
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220504130911-9e8278f09723
 	github.com/iotaledger/inx/go v0.0.0-20220506113305-665a887924b0
 	github.com/iotaledger/iota.go v1.0.0
@@ -28,7 +28,7 @@ require (
 	github.com/btcsuite/btcd/btcec/v2 v2.2.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cockroachdb/pebble v0.0.0-20220426173801-b33d6e173cae // indirect
+	github.com/cockroachdb/pebble v0.0.0-20220505215428-5ae2174691bd // indirect
 	github.com/codahale/hdrhistogram v0.9.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.0.1 // indirect
@@ -49,7 +49,7 @@ require (
 	github.com/mr-tron/base58 v1.2.0 // indirect
 	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c // indirect
 	github.com/pelletier/go-toml v1.9.3 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.0-beta.8 // indirect
+	github.com/pelletier/go-toml/v2 v2.0.0 // indirect
 	github.com/petermattis/goid v0.0.0-20220331194723-8ee3e6ded87a // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.1 // indirect

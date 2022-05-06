@@ -137,6 +137,7 @@ github.com/cockroachdb/logtags v0.0.0-20190617123548-eb05cc24525f/go.mod h1:i/u9
 github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f h1:6jduT9Hfc0njg5jJ1DdKCFPdMBrp/mdZfCpa5h+WM74=
 github.com/cockroachdb/pebble v0.0.0-20220426173801-b33d6e173cae h1:7lGpwt2wTBh7FApXTEdTDX5OFWsEg9CCe8wMlHJZDwA=
 github.com/cockroachdb/pebble v0.0.0-20220426173801-b33d6e173cae/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
+github.com/cockroachdb/pebble v0.0.0-20220505215428-5ae2174691bd/go.mod h1:buxOO9GBtOcq1DiXDpIPYrmxY020K2A8lOrwno5FetU=
 github.com/cockroachdb/redact v1.0.8/go.mod h1:BVNblN9mBWFyMyqK1k3AAiSxhvhfK2oOZZ2lK+dpvRg=
 github.com/cockroachdb/redact v1.1.3 h1:AKZds10rFSIj7qADf0g46UixK8NNLwWTNdCIGS5wfSQ=
 github.com/cockroachdb/sentry-go v0.6.1-cockroachdb.2/go.mod h1:8BT+cPK6xvFOcRlk0R8eg+OTkcqI6baNH4xAkpiYVvQ=
@@ -388,6 +389,8 @@ github.com/influxdata/usage-client v0.0.0-20160829180054-6d3895376368/go.mod h1:
 github.com/iotaledger/go-ds-kvstore v0.0.0-20220404122649-445475b91fcf h1:3LoDur2QvBLbyXrGubX6HmoP6x5pVn1KkheFonTa6Is=
 github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5 h1:47QLJXomkUgpl+644fem4jA/2SBLOIudDvhw5pEqxw8=
 github.com/iotaledger/hive.go v0.0.0-20220426085024-dfad09f16be5/go.mod h1:LV9ljJR04O2Q1pktCHwW7vWVLKC76POv6sVT8wQ3/04=
+github.com/iotaledger/hive.go v0.0.0-20220506133510-ef2e113d6665 h1:p+0UAbcmuRw6HLxt/8YSAzW8z5OyKaHPkeC0x91Hgwc=
+github.com/iotaledger/hive.go v0.0.0-20220506133510-ef2e113d6665/go.mod h1:fqZ0XbOseVQHXh9TmN80X8y5p2QVGzWz6aC0Cz9owwE=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220426085024-dfad09f16be5 h1:s1ku9sIx2Y82NCNnNoWCNJgeUwGCrlthwLaSSuJ3pJM=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220426085024-dfad09f16be5/go.mod h1:O18k+0+qtbHfk8AYI+dgMOoDBDKy9vwXk2ocyD7MyRI=
 github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220504130911-9e8278f09723 h1:W4X7sg6m3Iwi0sQ2XA9KauRh11eJr57Lug4IjdKe/Go=
@@ -576,6 +579,7 @@ github.com/pelletier/go-toml v1.9.3 h1:zeC5b1GviRUyKYd6OJPvBU/mcVDVoL1OhT17FCt5d
 github.com/pelletier/go-toml v1.9.3/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/pelletier/go-toml/v2 v2.0.0-beta.8 h1:dy81yyLYJDwMTifq24Oi/IslOslRrDSb3jwDggjz3Z0=
 github.com/pelletier/go-toml/v2 v2.0.0-beta.8/go.mod h1:r9LEWfGN8R5k0VXJ+0BkIe7MYkRdwZOjgMj2KwnJFUo=
+github.com/pelletier/go-toml/v2 v2.0.0/go.mod h1:r9LEWfGN8R5k0VXJ+0BkIe7MYkRdwZOjgMj2KwnJFUo=
 github.com/peterh/liner v1.0.1-0.20180619022028-8c1271fcf47f/go.mod h1:xIteQHvHuaLYG9IFj6mSxM0fCKrs34IrEQUhOYuGPHc=
 github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7/go.mod h1:CRroGNssyjTd/qIG2FyxByd2S8JEAZXBl4qUrZf8GS0=
 github.com/petermattis/goid v0.0.0-20180202154549-b0b1615b78e5/go.mod h1:jvVRKCrJTQWu0XVbaOlby/2lO20uSCHEMzzplHXte1o=
