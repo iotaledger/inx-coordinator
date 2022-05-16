@@ -10,11 +10,11 @@ import (
 	builder "github.com/iotaledger/iota.go/v3/builder"
 )
 
-// createCheckpoint creates a checkpoint message.
-func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Message, error) {
+// createCheckpoint creates a checkpoint block.
+func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Block, error) {
 
-	iotaMsg, err := builder.
-		NewMessageBuilder(coo.protoParas.Version).
+	iotaBlock, err := builder.
+		NewBlockBuilder(coo.protoParas.Version).
 		Parents(parents.ToSliceOfSlices()).
 		Build()
 	if err != nil {
@@ -22,16 +22,16 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Mes
 	}
 
 	// Validate
-	_, err = iotaMsg.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas)
+	_, err = iotaBlock.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas)
 	if err != nil {
 		return nil, err
 	}
 
-	return iotaMsg, nil
+	return iotaBlock, nil
 }
 
-// createMilestone creates a signed milestone message.
-func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Message, error) {
+// createMilestone creates a signed milestone block.
+func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Block, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
@@ -47,9 +47,9 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32,
 		msPayload.Opts = iotago.MilestoneOpts{receipt}
 	}
 
-	iotaMsg, err := builder.
-		NewMessageBuilder(coo.protoParas.Version).
-		ParentsMessageIDs(parentsSliceOfArray).
+	iotaBlock, err := builder.
+		NewBlockBuilder(coo.protoParas.Version).
+		ParentsBlockIDs(parentsSliceOfArray).
 		Payload(msPayload).
 		Build()
 	if err != nil {
@@ -65,11 +65,11 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32,
 	}
 
 	// Perform validation
-	if _, err := iotaMsg.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas); err != nil {
+	if _, err := iotaBlock.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas); err != nil {
 		return nil, err
 	}
 
-	return iotaMsg, nil
+	return iotaBlock, nil
 }
 
 // wraps the given MilestoneSigningFunc into a with retries enhanced version.

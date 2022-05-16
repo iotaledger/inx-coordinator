@@ -27,8 +27,8 @@ import (
 // to stop issuing milestones and checkpoints under high load.
 type BackPressureFunc func() bool
 
-// SendMessageFunc is a function which sends a message to the network.
-type SendMessageFunc = func(message *iotago.Message, msIndex ...milestone.Index) (hornet.MessageID, error)
+// SendBlockFunc is a function which sends a block to the network.
+type SendBlockFunc = func(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageID, error)
 
 // LatestMilestoneInfo contains the info of the latest milestone the connected node knows.
 type LatestMilestoneInfo struct {
@@ -51,14 +51,12 @@ var (
 	ErrNoTipsGiven = errors.New("no tips given")
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
-	// ErrInvalidSiblingsTrytesLength is returned when the computed siblings trytes do not fit into the signature message fragment.
-	ErrInvalidSiblingsTrytesLength = errors.New("siblings trytes too long")
 )
 
 // Events are the events issued by the coordinator.
 type Events struct {
-	// Fired when a checkpoint message is issued.
-	IssuedCheckpointMessage *events.Event
+	// Fired when a checkpoint block is issued.
+	IssuedCheckpointBlock *events.Event
 	// Fired when a milestone is issued.
 	IssuedMilestone *events.Event
 	// SoftError is triggered when a soft error is encountered.
@@ -72,15 +70,15 @@ type IsNodeSyncedFunc = func() bool
 
 // MilestoneMerkleRoots contains the merkle roots calculated by whiteflag confirmation.
 type MilestoneMerkleRoots struct {
-	// ConfirmedMerkleRoot is the root of the merkle tree containing the hash of all confirmed messages.
+	// ConfirmedMerkleRoot is the root of the merkle tree containing the hash of all confirmed blocks.
 	ConfirmedMerkleRoot iotago.MilestoneMerkleProof
-	// AppliedMerkleRoot is the root of the merkle tree containing the hash of all include messages that mutate the ledger.
+	// AppliedMerkleRoot is the root of the merkle tree containing the hash of all include blocks that mutate the ledger.
 	AppliedMerkleRoot iotago.MilestoneMerkleProof
 }
 
 type ComputeMilestoneMerkleRoots = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, previousMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
 
-// Coordinator is used to issue signed messages, called "milestones" to secure an IOTA network and prevent double spends.
+// Coordinator is used to issue signed blocks, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
 	// the logger used to log events.
 	*logger.WrappedLogger
@@ -98,8 +96,8 @@ type Coordinator struct {
 	treasuryOutputFunc UnspentTreasuryOutputFunc
 	// used to sign the milestones.
 	signerProvider MilestoneSignerProvider
-	// the function used to send a message.
-	sendMessageFunc SendMessageFunc
+	// the function used to send a block.
+	sendBlockFunc SendBlockFunc
 	// holds the coordinator options.
 	opts *Options
 
@@ -211,7 +209,7 @@ func New(
 	signerProvider MilestoneSignerProvider,
 	migratorService *migrator.MigratorService,
 	treasuryOutputFunc UnspentTreasuryOutputFunc,
-	sendMessageFunc SendMessageFunc,
+	sendBlockFunc SendBlockFunc,
 	opts ...Option) (*Coordinator, error) {
 
 	options := &Options{}
@@ -229,14 +227,14 @@ func New(
 		signerProvider:     signerProvider,
 		migratorService:    migratorService,
 		treasuryOutputFunc: treasuryOutputFunc,
-		sendMessageFunc:    sendMessageFunc,
+		sendBlockFunc:      sendBlockFunc,
 		opts:               options,
 
 		Events: &Events{
-			IssuedCheckpointMessage: events.NewEvent(CheckpointCaller),
-			IssuedMilestone:         events.NewEvent(MilestoneCaller),
-			SoftError:               events.NewEvent(events.ErrorCaller),
-			QuorumFinished:          events.NewEvent(QuorumFinishedCaller),
+			IssuedCheckpointBlock: events.NewEvent(CheckpointCaller),
+			IssuedMilestone:       events.NewEvent(MilestoneCaller),
+			SoftError:             events.NewEvent(events.ErrorCaller),
+			QuorumFinished:        events.NewEvent(QuorumFinishedCaller),
 		},
 	}
 	result.WrappedLogger = logger.NewWrappedLogger(options.logger)
@@ -278,7 +276,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
-		state.LatestMilestoneMessageID = hornet.NullMessageID()
+		state.LatestMilestoneBlockID = hornet.NullMessageID()
 		state.LatestMilestoneID = latestMilestoneID
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = time.Now()
@@ -371,12 +369,12 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		}
 	}
 
-	milestoneMsg, err := coo.createMilestone(newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, receipt, previousMilestoneID, merkleProof)
+	milestoneBlock, err := coo.createMilestone(newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, receipt, previousMilestoneID, merkleProof)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
 
-	milestoneID, err := milestoneMsg.Payload.(*iotago.Milestone).ID()
+	milestoneID, err := milestoneBlock.Payload.(*iotago.Milestone).ID()
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute milestone ID: %w", err))
 	}
@@ -386,7 +384,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return common.CriticalError(fmt.Errorf("unable to rename old coordinator state file: %w", err))
 	}
 
-	latestMilestoneMessageID, err := coo.sendMessageFunc(milestoneMsg, newMilestoneIndex)
+	latestMilestoneBlockID, err := coo.sendBlockFunc(milestoneBlock, newMilestoneIndex)
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to send milestone: %w", err))
 	}
@@ -398,7 +396,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 	}
 
 	// always reference the last milestone directly to speed up syncing
-	coo.state.LatestMilestoneMessageID = latestMilestoneMessageID
+	coo.state.LatestMilestoneBlockID = latestMilestoneBlockID
 	coo.state.LatestMilestoneID = *milestoneID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = newMilestoneTimestamp
@@ -407,7 +405,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 
-	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneID, coo.state.LatestMilestoneMessageID)
+	coo.Events.IssuedMilestone.Trigger(coo.state.LatestMilestoneIndex, coo.state.LatestMilestoneID, coo.state.LatestMilestoneBlockID)
 
 	return nil
 }
@@ -422,7 +420,7 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// only one parent references the last known milestone or NullMessageID if startIndex = 1 (see InitState)
-		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneMessageID}, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID)
+		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneBlockID}, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID)
 		if err != nil {
 			// creating milestone failed => always a critical error at bootstrap
 			return nil, common.CriticalError(err)
@@ -431,14 +429,14 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 		coo.bootstrapped = true
 	}
 
-	return coo.state.LatestMilestoneMessageID, nil
+	return coo.state.LatestMilestoneBlockID, nil
 }
 
 // IssueCheckpoint tries to create and send a "checkpoint" to the network.
-// a checkpoint can contain multiple chained messages to reference big parts of the unreferenced cone.
+// a checkpoint can contain multiple chained blocks to reference big parts of the unreferenced cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessageID hornet.MessageID, tips hornet.MessageIDs) (hornet.MessageID, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlockID hornet.MessageID, tips hornet.MessageIDs) (hornet.MessageID, error) {
 
 	if len(tips) == 0 {
 		return nil, ErrNoTipsGiven
@@ -457,7 +455,7 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
-	// maximum 8 parents per message (7 tips + last checkpoint messageID)
+	// maximum 8 parents per block (7 tips + last checkpoint blockID)
 	checkpointsNumber := int(math.Ceil(float64(len(tips)) / 7.0))
 
 	// issue several checkpoints until all tips are used
@@ -469,26 +467,26 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointMessa
 			tipEnd = len(tips)
 		}
 
-		parents := hornet.MessageIDs{lastCheckpointMessageID}
+		parents := hornet.MessageIDs{lastCheckpointBlockID}
 		parents = append(parents, tips[tipStart:tipEnd]...)
 		parents = parents.RemoveDupsAndSortByLexicalOrder()
 
-		msg, err := coo.createCheckpoint(parents)
+		block, err := coo.createCheckpoint(parents)
 		if err != nil {
 			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
 
-		messageID, err := coo.sendMessageFunc(msg)
+		blockID, err := coo.sendBlockFunc(block)
 		if err != nil {
 			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 
-		lastCheckpointMessageID = messageID
+		lastCheckpointBlockID = blockID
 
-		coo.Events.IssuedCheckpointMessage.Trigger(checkpointIndex, i, checkpointsNumber, lastCheckpointMessageID)
+		coo.Events.IssuedCheckpointBlock.Trigger(checkpointIndex, i, checkpointsNumber, lastCheckpointBlockID)
 	}
 
-	return lastCheckpointMessageID, nil
+	return lastCheckpointBlockID, nil
 }
 
 // IssueMilestone creates the next milestone.
@@ -514,7 +512,7 @@ func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.Messag
 		return nil, err
 	}
 
-	return coo.state.LatestMilestoneMessageID, nil
+	return coo.state.LatestMilestoneBlockID, nil
 }
 
 // Interval returns the interval milestones should be issued.

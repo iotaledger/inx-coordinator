@@ -5,18 +5,18 @@ import (
 	inx "github.com/iotaledger/inx/go"
 )
 
-func INXMessageIDsFromMessageIDs(messageIDs hornet.MessageIDs) []*inx.MessageId {
-	result := make([]*inx.MessageId, len(messageIDs))
-	for i := range messageIDs {
-		result[i] = inx.NewMessageId(messageIDs[i].ToArray())
+func INXBlockIDsFromBlockIDs(blockIDs hornet.MessageIDs) []*inx.BlockId {
+	result := make([]*inx.BlockId, len(blockIDs))
+	for i := range blockIDs {
+		result[i] = inx.NewBlockId(blockIDs[i].ToArray())
 	}
 	return result
 }
 
-func MessageIDsFromINXMessageIDs(messageIDs []*inx.MessageId) hornet.MessageIDs {
-	result := make([]hornet.MessageID, len(messageIDs))
-	for i := range messageIDs {
-		result[i] = hornet.MessageIDFromArray(messageIDs[i].Unwrap())
+func BlockIDsFromINXBlockIDs(blockIDs []*inx.BlockId) hornet.MessageIDs {
+	result := make([]hornet.MessageID, len(blockIDs))
+	for i := range blockIDs {
+		result[i] = hornet.MessageIDFromArray(blockIDs[i].Unwrap())
 	}
 	return result
 }

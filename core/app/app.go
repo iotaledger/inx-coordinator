@@ -1,12 +1,12 @@
 package app
 
 import (
-	"github.com/gohornet/hornet/core/gracefulshutdown"
-	"github.com/gohornet/hornet/plugins/profiling"
 	"github.com/gohornet/inx-coordinator/core/coordinator"
 	"github.com/gohornet/inx-coordinator/core/inx"
 	"github.com/gohornet/inx-coordinator/plugins/migrator"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
+	"github.com/iotaledger/hive.go/app/plugins/profiling"
 )
 
 var (
@@ -23,7 +23,7 @@ func App() *app.App {
 		app.WithCoreComponents([]*app.CoreComponent{
 			inx.CoreComponent,
 			coordinator.CoreComponent,
-			gracefulshutdown.CoreComponent,
+			shutdown.CoreComponent,
 		}...),
 		app.WithPlugins([]*app.Plugin{
 			migrator.Plugin,

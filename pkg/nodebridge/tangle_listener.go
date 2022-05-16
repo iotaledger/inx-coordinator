@@ -8,31 +8,31 @@ import (
 )
 
 type TangleListener struct {
-	messageSolidSyncEvent       *events.SyncEvent
+	blockSolidSyncEvent         *events.SyncEvent
 	milestoneConfirmedSyncEvent *events.SyncEvent
 }
 
 func newTangleListener() *TangleListener {
 	return &TangleListener{
-		messageSolidSyncEvent:       events.NewSyncEvent(),
+		blockSolidSyncEvent:         events.NewSyncEvent(),
 		milestoneConfirmedSyncEvent: events.NewSyncEvent(),
 	}
 }
 
-func (t *TangleListener) MessageSolidSyncEvent() *events.SyncEvent {
-	return t.messageSolidSyncEvent
+func (t *TangleListener) BlockSolidSyncEvent() *events.SyncEvent {
+	return t.blockSolidSyncEvent
 }
 
 func (t *TangleListener) MilestoneConfirmedSyncEvent() *events.SyncEvent {
 	return t.milestoneConfirmedSyncEvent
 }
 
-func (t *TangleListener) RegisterMessageSolidEvent(messageID iotago.MessageID) chan struct{} {
-	return t.messageSolidSyncEvent.RegisterEvent(string(messageID[:]))
+func (t *TangleListener) RegisterBlockSolidEvent(blockID iotago.BlockID) chan struct{} {
+	return t.blockSolidSyncEvent.RegisterEvent(string(blockID[:]))
 }
 
-func (t *TangleListener) DeregisterMessageSolidEvent(messageID iotago.MessageID) {
-	t.messageSolidSyncEvent.DeregisterEvent(string(messageID[:]))
+func (t *TangleListener) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
+	t.blockSolidSyncEvent.DeregisterEvent(string(blockID[:]))
 }
 
 func (t *TangleListener) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
@@ -43,8 +43,8 @@ func (t *TangleListener) DeregisterMilestoneConfirmedEvent(msIndex milestone.Ind
 	t.milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }
 
-func (t *TangleListener) processSolidMessage(metadata *inx.MessageMetadata) {
-	t.messageSolidSyncEvent.Trigger(string(metadata.GetMessageId().GetId()))
+func (t *TangleListener) processSolidBlock(metadata *inx.BlockMetadata) {
+	t.blockSolidSyncEvent.Trigger(string(metadata.GetBlockId().GetId()))
 }
 
 func (t *TangleListener) processConfirmedMilestone(ms *inx.Milestone) {

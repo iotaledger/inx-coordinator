@@ -27,16 +27,16 @@ const (
 	CfgCoordinatorQuorumGroups = "coordinator.quorum.groups"
 	// CfgCoordinatorQuorumTimeout defines the timeout until a node in the quorum must have answered.
 	CfgCoordinatorQuorumTimeout = "coordinator.quorum.timeout"
-	// CfgCoordinatorCheckpointsMaxTrackedMessages defines the maximum amount of known messages for milestone tipselection
+	// CfgCoordinatorCheckpointsMaxTrackedBlocks defines the maximum amount of known blocks for milestone tipselection
 	// if this limit is exceeded, a new checkpoint is issued.
-	CfgCoordinatorCheckpointsMaxTrackedMessages = "coordinator.checkpoints.maxTrackedMessages"
-	// CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold defines the minimum threshold of unreferenced messages in the heaviest branch for milestone tipselection
+	CfgCoordinatorCheckpointsMaxTrackedBlocks = "coordinator.checkpoints.maxTrackedBlocks"
+	// CfgCoordinatorTipselectMinHeaviestBranchUnreferencedBlocksThreshold defines the minimum threshold of unreferenced blocks in the heaviest branch for milestone tipselection
 	// if the value falls below that threshold, no more heaviest branch tips are picked.
-	CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold = "coordinator.tipsel.minHeaviestBranchUnreferencedMessagesThreshold"
-	// CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint defines the maximum amount of checkpoint messages with heaviest branch tips that are picked
-	// if the heaviest branch is not below "UnreferencedMessagesThreshold" before.
+	CfgCoordinatorTipselectMinHeaviestBranchUnreferencedBlocksThreshold = "coordinator.tipsel.minHeaviestBranchUnreferencedBlocksThreshold"
+	// CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint defines the maximum amount of checkpoint blocks with heaviest branch tips that are picked
+	// if the heaviest branch is not below "UnreferencedBlocksThreshold" before.
 	CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint = "coordinator.tipsel.maxHeaviestBranchTipsPerCheckpoint"
-	// CfgCoordinatorTipselectRandomTipsPerCheckpoint defines the amount of checkpoint messages with random tips that are picked if a checkpoint is issued and at least
+	// CfgCoordinatorTipselectRandomTipsPerCheckpoint defines the amount of checkpoint blocks with random tips that are picked if a checkpoint is issued and at least
 	// one heaviest branch tip was found, otherwise no random tips will be picked.
 	CfgCoordinatorTipselectRandomTipsPerCheckpoint = "coordinator.tipsel.randomTipsPerCheckpoint"
 	// CfgCoordinatorTipselectHeaviestBranchSelectionTimeout defines the maximum duration to select the heaviest branch tips.
@@ -53,10 +53,10 @@ var params = &app.ComponentParams{
 		fs.String(CfgCoordinatorSigningRemoteAddress, "localhost:12345", "the address of the remote signing provider (insecure connection!)")
 		fs.Bool(CfgCoordinatorQuorumEnabled, false, "whether the coordinator quorum is enabled")
 		fs.Duration(CfgCoordinatorQuorumTimeout, 2*time.Second, "the timeout until a node in the quorum must have answered")
-		fs.Int(CfgCoordinatorCheckpointsMaxTrackedMessages, 10000, "maximum amount of known messages for milestone tipselection")
-		fs.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedMessagesThreshold, 20, "minimum threshold of unreferenced messages in the heaviest branch")
-		fs.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint messages with heaviest branch tips")
-		fs.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint messages with random tips")
+		fs.Int(CfgCoordinatorCheckpointsMaxTrackedBlocks, 10000, "maximum amount of known blocks for milestone tipselection")
+		fs.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedBlocksThreshold, 20, "minimum threshold of unreferenced blocks in the heaviest branch")
+		fs.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint, 10, "maximum amount of checkpoint blocks with heaviest branch tips")
+		fs.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint, 3, "amount of checkpoint blocks with random tips")
 		fs.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout, 100*time.Millisecond, "the maximum duration to select the heaviest branch tips")
 	},
 	Masked: nil,
