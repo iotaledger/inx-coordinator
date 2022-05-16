@@ -14,7 +14,6 @@ import (
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/plugins/migrator"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	inx "github.com/iotaledger/inx/go"
 )
 
@@ -32,7 +31,6 @@ func init() {
 
 type dependencies struct {
 	dig.In
-	AppConfig  *configuration.Configuration `name:"appConfig"`
 	NodeBridge *nodebridge.NodeBridge
 	Connection *grpc.ClientConn
 }
@@ -46,7 +44,6 @@ func provide(c *dig.Container) error {
 
 	type inxDeps struct {
 		dig.In
-		AppConfig       *configuration.Configuration `name:"appConfig"`
 		ShutdownHandler *shutdown.ShutdownHandler
 	}
 
@@ -57,7 +54,7 @@ func provide(c *dig.Container) error {
 	}
 
 	if err := c.Provide(func(deps inxDeps) (inxDepsOut, error) {
-		conn, err := grpc.Dial(deps.AppConfig.String(CfgINXAddress),
+		conn, err := grpc.Dial(ParamsINX.Address,
 			grpc.WithChainUnaryInterceptor(grpc_retry.UnaryClientInterceptor(), grpc_prometheus.UnaryClientInterceptor),
 			grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),
 			grpc.WithTransportCredentials(insecure.NewCredentials()),

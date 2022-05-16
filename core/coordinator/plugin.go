@@ -23,7 +23,6 @@ import (
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/pkg/todo"
 	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/configuration"
 	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -65,8 +64,6 @@ var (
 	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
 
-	maxTrackedBlocks int
-
 	nextCheckpointSignal chan struct{}
 	nextMilestoneSignal  chan struct{}
 
@@ -85,7 +82,6 @@ var (
 
 type dependencies struct {
 	dig.In
-	AppConfig       *configuration.Configuration `name:"appConfig"`
 	Coordinator     *coordinator.Coordinator
 	Selector        *mselection.HeaviestSelector
 	NodeBridge      *nodebridge.NodeBridge
@@ -94,18 +90,13 @@ type dependencies struct {
 
 func provide(c *dig.Container) error {
 
-	type selectorDeps struct {
-		dig.In
-		AppConfig *configuration.Configuration `name:"appConfig"`
-	}
-
-	if err := c.Provide(func(deps selectorDeps) *mselection.HeaviestSelector {
+	if err := c.Provide(func() *mselection.HeaviestSelector {
 		// use the heaviest branch tip selection for the milestones
 		return mselection.New(
-			deps.AppConfig.Int(CfgCoordinatorTipselectMinHeaviestBranchUnreferencedBlocksThreshold),
-			deps.AppConfig.Int(CfgCoordinatorTipselectMaxHeaviestBranchTipsPerCheckpoint),
-			deps.AppConfig.Int(CfgCoordinatorTipselectRandomTipsPerCheckpoint),
-			deps.AppConfig.Duration(CfgCoordinatorTipselectHeaviestBranchSelectionTimeout),
+			ParamsCoordinator.TipSel.MinHeaviestBranchUnreferencedBlocksThreshold,
+			ParamsCoordinator.TipSel.MaxHeaviestBranchTipsPerCheckpoint,
+			ParamsCoordinator.TipSel.RandomTipsPerCheckpoint,
+			ParamsCoordinator.TipSel.HeaviestBranchSelectionTimeout,
 		)
 	}); err != nil {
 		return err
@@ -113,8 +104,7 @@ func provide(c *dig.Container) error {
 
 	type coordinatorDeps struct {
 		dig.In
-		MigratorService *migrator.MigratorService    `optional:"true"`
-		AppConfig       *configuration.Configuration `name:"appConfig"`
+		MigratorService *migrator.MigratorService `optional:"true"`
 		NodeBridge      *nodebridge.NodeBridge
 	}
 
@@ -123,8 +113,8 @@ func provide(c *dig.Container) error {
 		initCoordinator := func() (*coordinator.Coordinator, error) {
 
 			signingProvider, err := initSigningProvider(
-				deps.AppConfig.String(CfgCoordinatorSigningProvider),
-				deps.AppConfig.String(CfgCoordinatorSigningRemoteAddress),
+				ParamsCoordinator.Signing.Provider,
+				ParamsCoordinator.Signing.RemoteAddress,
 				deps.NodeBridge.KeyManager(),
 				deps.NodeBridge.MilestonePublicKeyCount(),
 			)
@@ -132,12 +122,7 @@ func provide(c *dig.Container) error {
 				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
 			}
 
-			quorumGroups, err := initQuorumGroups(deps.AppConfig)
-			if err != nil {
-				return nil, fmt.Errorf("failed to initialize coordinator quorum: %s", err)
-			}
-
-			if deps.AppConfig.Bool(CfgCoordinatorQuorumEnabled) {
+			if ParamsCoordinator.Quorum.Enabled {
 				CoreComponent.LogInfo("running coordinator with quorum enabled")
 			}
 
@@ -154,11 +139,11 @@ func provide(c *dig.Container) error {
 				deps.NodeBridge.LatestTreasuryOutput,
 				sendBlock,
 				coordinator.WithLogger(CoreComponent.Logger()),
-				coordinator.WithStateFilePath(deps.AppConfig.String(CfgCoordinatorStateFilePath)),
-				coordinator.WithMilestoneInterval(deps.AppConfig.Duration(CfgCoordinatorInterval)),
-				coordinator.WithQuorum(deps.AppConfig.Bool(CfgCoordinatorQuorumEnabled), quorumGroups, deps.AppConfig.Duration(CfgCoordinatorQuorumTimeout)),
-				coordinator.WithSigningRetryAmount(deps.AppConfig.Int(CfgCoordinatorSigningRetryAmount)),
-				coordinator.WithSigningRetryTimeout(deps.AppConfig.Duration(CfgCoordinatorSigningRetryTimeout)),
+				coordinator.WithStateFilePath(ParamsCoordinator.StateFilePath),
+				coordinator.WithMilestoneInterval(ParamsCoordinator.Interval),
+				coordinator.WithQuorum(ParamsCoordinator.Quorum.Enabled, ParamsCoordinator.Quorum.Groups, ParamsCoordinator.Quorum.Timeout),
+				coordinator.WithSigningRetryAmount(ParamsCoordinator.Signing.RetryAmount),
+				coordinator.WithSigningRetryTimeout(ParamsCoordinator.Signing.RetryTimeout),
 			)
 			if err != nil {
 				return nil, err
@@ -201,8 +186,6 @@ func configure() error {
 	// must be a buffered channel, otherwise signal gets
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
-
-	maxTrackedBlocks = deps.AppConfig.Int(CfgCoordinatorCheckpointsMaxTrackedBlocks)
 
 	configureEvents()
 	return nil
@@ -272,7 +255,7 @@ func run() error {
 			select {
 			case <-nextCheckpointSignal:
 				// check the thresholds again, because a new milestone could have been issued in the meantime
-				if trackedBlocksCount := deps.Selector.TrackedBlocksCount(); trackedBlocksCount < maxTrackedBlocks {
+				if trackedBlocksCount := deps.Selector.TrackedBlocksCount(); trackedBlocksCount < ParamsCoordinator.Checkpoints.MaxTrackedBlocks {
 					continue
 				}
 
@@ -431,33 +414,6 @@ func initSigningProvider(signingProviderType string, remoteEndpoint string, keyM
 	}
 }
 
-func initQuorumGroups(appConfig *configuration.Configuration) (map[string][]*coordinator.QuorumClientConfig, error) {
-	// parse quorum groups config
-	quorumGroups := make(map[string][]*coordinator.QuorumClientConfig)
-	for _, groupName := range appConfig.MapKeys(CfgCoordinatorQuorumGroups) {
-		configKey := CfgCoordinatorQuorumGroups + "." + groupName
-
-		groupConfig := []*coordinator.QuorumClientConfig{}
-		if err := appConfig.Unmarshal(configKey, &groupConfig); err != nil {
-			return nil, fmt.Errorf("failed to parse group: %s, %s", configKey, err)
-		}
-
-		if len(groupConfig) == 0 {
-			return nil, fmt.Errorf("invalid group: %s, no entries", configKey)
-		}
-
-		for _, entry := range groupConfig {
-			if entry.BaseURL == "" {
-				return nil, fmt.Errorf("invalid group: %s, missing baseURL in entry", configKey)
-			}
-		}
-
-		quorumGroups[groupName] = groupConfig
-	}
-
-	return quorumGroups, nil
-}
-
 func sendBlock(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageID, error) {
 
 	var err error
@@ -512,7 +468,7 @@ func configureEvents() {
 		}
 
 		// add tips to the heaviest branch selector
-		if trackedBlocksCount := deps.Selector.OnNewSolidBlock(metadata); trackedBlocksCount >= maxTrackedBlocks {
+		if trackedBlocksCount := deps.Selector.OnNewSolidBlock(metadata); trackedBlocksCount >= ParamsCoordinator.Checkpoints.MaxTrackedBlocks {
 			CoreComponent.LogDebugf("Coordinator Tipselector: trackedBlocksCount: %d", trackedBlocksCount)
 
 			// issue next checkpoint
