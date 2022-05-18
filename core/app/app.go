@@ -14,7 +14,7 @@ var (
 	Name = "inx-coordinator"
 
 	// Version of the app.
-	Version = "0.3.1"
+	Version = "0.4.0"
 )
 
 func App() *app.App {

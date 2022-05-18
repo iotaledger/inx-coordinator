@@ -1,7 +1,6 @@
 package nodebridge
 
 import (
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/events"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -35,11 +34,11 @@ func (t *TangleListener) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
 	t.blockSolidSyncEvent.DeregisterEvent(string(blockID[:]))
 }
 
-func (t *TangleListener) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
+func (t *TangleListener) RegisterMilestoneConfirmedEvent(msIndex uint32) chan struct{} {
 	return t.milestoneConfirmedSyncEvent.RegisterEvent(msIndex)
 }
 
-func (t *TangleListener) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
+func (t *TangleListener) DeregisterMilestoneConfirmedEvent(msIndex uint32) {
 	t.milestoneConfirmedSyncEvent.DeregisterEvent(msIndex)
 }
 
@@ -48,5 +47,5 @@ func (t *TangleListener) processSolidBlock(metadata *inx.BlockMetadata) {
 }
 
 func (t *TangleListener) processConfirmedMilestone(ms *inx.Milestone) {
-	t.milestoneConfirmedSyncEvent.Trigger(milestone.Index(ms.GetMilestoneInfo().GetMilestoneIndex()))
+	t.milestoneConfirmedSyncEvent.Trigger(ms.GetMilestoneInfo().GetMilestoneIndex())
 }

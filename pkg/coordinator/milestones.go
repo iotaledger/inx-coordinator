@@ -3,19 +3,17 @@ package coordinator
 import (
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	iotago "github.com/iotaledger/iota.go/v3"
 	builder "github.com/iotaledger/iota.go/v3/builder"
 )
 
 // createCheckpoint creates a checkpoint block.
-func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Block, error) {
+func (coo *Coordinator) createCheckpoint(parents iotago.BlockIDs) (*iotago.Block, error) {
 
 	iotaBlock, err := builder.
 		NewBlockBuilder(coo.protoParas.Version).
-		Parents(parents.ToSliceOfSlices()).
+		ParentsBlockIDs(parents).
 		Build()
 	if err != nil {
 		return nil, err
@@ -31,17 +29,16 @@ func (coo *Coordinator) createCheckpoint(parents hornet.MessageIDs) (*iotago.Blo
 }
 
 // createMilestone creates a signed milestone block.
-func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32, parents hornet.MessageIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Block, error) {
+func (coo *Coordinator) createMilestone(index uint32, timestamp uint32, parents iotago.BlockIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Block, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 
-	parentsSliceOfArray := parents.ToSliceOfArrays()
 	confMerkleRoot := [iotago.MilestoneMerkleProofLength]byte{}
-	copy(confMerkleRoot[:], merkleProof.ConfirmedMerkleRoot[:])
+	copy(confMerkleRoot[:], merkleProof.InclusionMerkleRoot[:])
 	appliedMerkleRoot := [iotago.MilestoneMerkleProofLength]byte{}
 	copy(appliedMerkleRoot[:], merkleProof.AppliedMerkleRoot[:])
 
-	msPayload := iotago.NewMilestone(uint32(index), timestamp, coo.protoParas.Version, previousMilestoneID, parentsSliceOfArray, confMerkleRoot, appliedMerkleRoot)
+	msPayload := iotago.NewMilestone(index, timestamp, coo.protoParas.Version, previousMilestoneID, parents, confMerkleRoot, appliedMerkleRoot)
 
 	if receipt != nil {
 		msPayload.Opts = iotago.MilestoneOpts{receipt}
@@ -49,7 +46,7 @@ func (coo *Coordinator) createMilestone(index milestone.Index, timestamp uint32,
 
 	iotaBlock, err := builder.
 		NewBlockBuilder(coo.protoParas.Version).
-		ParentsBlockIDs(parentsSliceOfArray).
+		ParentsBlockIDs(parents).
 		Payload(msPayload).
 		Build()
 	if err != nil {

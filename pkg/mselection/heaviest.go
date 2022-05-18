@@ -9,9 +9,8 @@ import (
 	"github.com/bits-and-blooms/bitset"
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/inx-coordinator/pkg/utils"
 	inx "github.com/iotaledger/inx/go"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -35,19 +34,19 @@ type HeaviestSelector struct {
 	// the maximum duration to select the heaviest branch tips
 	heaviestBranchSelectionTimeout time.Duration
 	// map of all tracked blocks
-	trackedBlocks map[string]*trackedBlock
+	trackedBlocks map[iotago.BlockID]*trackedBlock
 	// list of available tips
 	tips *list.List
 }
 
 type trackedBlock struct {
-	blockID hornet.MessageID // block ID of the corresponding block
-	tip     *list.Element    // pointer to the element in the tip list
-	refs    *bitset.BitSet   // BitSet of all the referenced blocks
+	blockID iotago.BlockID // block ID of the corresponding block
+	tip     *list.Element  // pointer to the element in the tip list
+	refs    *bitset.BitSet // BitSet of all the referenced blocks
 }
 
 type trackedBlocksList struct {
-	blocks map[string]*trackedBlock
+	blocks map[iotago.BlockID]*trackedBlock
 }
 
 // Len returns the length of the inner blocks slice.
@@ -91,7 +90,7 @@ func (il *trackedBlocksList) referenceTip(tip *trackedBlock) {
 
 // removeTip removes the tip from the map.
 func (il *trackedBlocksList) removeTip(tip *trackedBlock) {
-	delete(il.blocks, tip.blockID.ToMapKey())
+	delete(il.blocks, tip.blockID)
 }
 
 // New creates a new HeaviestSelector instance.
@@ -112,7 +111,7 @@ func (s *HeaviestSelector) Reset() {
 	defer s.Unlock()
 
 	// create an empty map
-	s.trackedBlocks = make(map[string]*trackedBlock)
+	s.trackedBlocks = make(map[iotago.BlockID]*trackedBlock)
 
 	// create an empty list
 	s.tips = list.New()
@@ -172,7 +171,7 @@ func (s *HeaviestSelector) selectTip(tipsList *trackedBlocksList) (*trackedBlock
 // if at least one heaviest branch tip was found, "randomTipsPerCheckpoint" random tips are added
 // to add some additional randomness to prevent parasite chain attacks.
 // the selection is canceled after a fixed deadline. in this case, it returns the current collected tips.
-func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, error) {
+func (s *HeaviestSelector) SelectTips(minRequiredTips int) (iotago.BlockIDs, error) {
 
 	// create a working list with the current tips to release the lock to allow faster iteration
 	// and to get a frozen view of the tangle, so an attacker can't
@@ -185,7 +184,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (hornet.MessageIDs, e
 		return nil, ErrNoTipsAvailable
 	}
 
-	var tips hornet.MessageIDs
+	var tips iotago.BlockIDs
 
 	// run the tip selection for at most 0.1s to keep the view on the tangle recent; this should be plenty
 	ctx, cancel := context.WithTimeout(context.Background(), s.heaviestBranchSelectionTimeout)
@@ -244,17 +243,17 @@ func (s *HeaviestSelector) OnNewSolidBlock(blockMeta *inx.BlockMetadata) (tracke
 	s.Lock()
 	defer s.Unlock()
 
-	blockID := hornet.MessageIDFromArray(blockMeta.UnwrapBlockID())
-	parents := utils.BlockIDsFromINXBlockIDs(blockMeta.GetParents())
+	blockID := blockMeta.UnwrapBlockID()
+	parents := blockMeta.UnwrapParents()
 
 	// filter duplicate blocks
-	if _, contains := s.trackedBlocks[blockID.ToMapKey()]; contains {
+	if _, contains := s.trackedBlocks[blockID]; contains {
 		return
 	}
 
 	parentItems := []*trackedBlock{}
 	for _, parent := range parents {
-		parentItem := s.trackedBlocks[parent.ToMapKey()]
+		parentItem := s.trackedBlocks[parent]
 		if parentItem == nil {
 			continue
 		}
@@ -272,7 +271,7 @@ func (s *HeaviestSelector) OnNewSolidBlock(blockMeta *inx.BlockMetadata) (tracke
 	for _, parentItem := range parentItems {
 		it.refs.InPlaceUnion(parentItem.refs)
 	}
-	s.trackedBlocks[it.blockID.ToMapKey()] = it
+	s.trackedBlocks[it.blockID] = it
 
 	// update tips
 	for _, parentItem := range parentItems {
@@ -298,10 +297,10 @@ func (s *HeaviestSelector) tipsToList() *trackedBlocksList {
 	s.Lock()
 	defer s.Unlock()
 
-	result := make(map[string]*trackedBlock)
+	result := make(map[iotago.BlockID]*trackedBlock)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
 		tip := e.Value.(*trackedBlock)
-		result[tip.blockID.ToMapKey()] = tip
+		result[tip.blockID] = tip
 	}
 	return &trackedBlocksList{blocks: result}
 }

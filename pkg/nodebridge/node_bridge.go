@@ -12,10 +12,8 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/hornet"
 	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
-	"github.com/gohornet/inx-coordinator/pkg/utils"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/logger"
 	inx "github.com/iotaledger/inx/go"
@@ -122,7 +120,7 @@ func (n *NodeBridge) LatestMilestone() *coordinator.LatestMilestoneInfo {
 	n.isSyncedMutex.RLock()
 	defer n.isSyncedMutex.RUnlock()
 	return &coordinator.LatestMilestoneInfo{
-		Index:     milestone.Index(n.latestMilestone.GetMilestoneIndex()),
+		Index:     n.latestMilestone.GetMilestoneIndex(),
 		Timestamp: n.latestMilestone.GetMilestoneTimestamp(),
 	}
 }
@@ -141,11 +139,11 @@ func (n *NodeBridge) LatestTreasuryOutput() (*coordinator.LatestTreasuryOutput, 
 	}, nil
 }
 
-func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex milestone.Index, msTimestamp uint32, parents hornet.MessageIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
+func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex uint32, msTimestamp uint32, parents iotago.BlockIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 	req := &inx.WhiteFlagRequest{
-		MilestoneIndex:      uint32(msIndex),
+		MilestoneIndex:      msIndex,
 		MilestoneTimestamp:  msTimestamp,
-		Parents:             utils.INXBlockIDsFromBlockIDs(parents),
+		Parents:             inx.NewBlockIds(parents),
 		PreviousMilestoneId: inx.NewMilestoneId(previousMilestoneId),
 	}
 
@@ -155,10 +153,10 @@ func (n *NodeBridge) ComputeMerkleTreeHash(ctx context.Context, msIndex mileston
 	}
 
 	proof := &coordinator.MilestoneMerkleRoots{
-		ConfirmedMerkleRoot: iotago.MilestoneMerkleProof{},
+		InclusionMerkleRoot: iotago.MilestoneMerkleProof{},
 		AppliedMerkleRoot:   iotago.MilestoneMerkleProof{},
 	}
-	copy(proof.ConfirmedMerkleRoot[:], res.GetMilestoneConfirmedMerkleRoot())
+	copy(proof.InclusionMerkleRoot[:], res.GetMilestoneInclusionMerkleRoot())
 	copy(proof.AppliedMerkleRoot[:], res.GetMilestoneAppliedMerkleRoot())
 
 	return proof, nil
@@ -324,10 +322,10 @@ func (n *NodeBridge) DeregisterBlockSolidEvent(blockID iotago.BlockID) {
 	n.tangleListener.DeregisterBlockSolidEvent(blockID)
 }
 
-func (n *NodeBridge) RegisterMilestoneConfirmedEvent(msIndex milestone.Index) chan struct{} {
+func (n *NodeBridge) RegisterMilestoneConfirmedEvent(msIndex uint32) chan struct{} {
 	return n.tangleListener.RegisterMilestoneConfirmedEvent(msIndex)
 }
 
-func (n *NodeBridge) DeregisterMilestoneConfirmedEvent(msIndex milestone.Index) {
+func (n *NodeBridge) DeregisterMilestoneConfirmedEvent(msIndex uint32) {
 	n.tangleListener.DeregisterMilestoneConfirmedEvent(msIndex)
 }

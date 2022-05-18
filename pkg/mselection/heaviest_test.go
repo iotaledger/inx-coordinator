@@ -6,8 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/inx-coordinator/pkg/utils"
 	"github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -46,15 +44,17 @@ func randBytes(length int) []byte {
 	return b
 }
 
-func randBlockID() hornet.MessageID {
-	return randBytes(iotago.BlockIDLength)
+func randBlockID() iotago.BlockID {
+	blockID := iotago.BlockID{}
+	copy(blockID[:], randBytes(iotago.BlockIDLength))
+	return blockID
 }
 
-func newMetadata(parents hornet.MessageIDs) (*inx.BlockMetadata, hornet.MessageID) {
+func newMetadata(parents iotago.BlockIDs) (*inx.BlockMetadata, iotago.BlockID) {
 	blockID := randBlockID()
 	return &inx.BlockMetadata{
-		BlockId: inx.NewBlockId(blockID.ToArray()),
-		Parents: utils.INXBlockIDsFromBlockIDs(parents),
+		BlockId: inx.NewBlockId(blockID),
+		Parents: inx.NewBlockIds(parents),
 		Solid:   true,
 	}, blockID
 }
@@ -63,9 +63,9 @@ func TestHeaviestSelector_SelectTipsChain(t *testing.T) {
 	hps := newHPS()
 
 	// create a chain
-	lastBlockID := hornet.NullMessageID()
+	lastBlockID := iotago.EmptyBlockID()
 	for i := 1; i <= numTestBlocks; i++ {
-		metadata, blockID := newMetadata(hornet.MessageIDs{lastBlockID})
+		metadata, blockID := newMetadata(iotago.BlockIDs{lastBlockID})
 		hps.OnNewSolidBlock(metadata)
 		lastBlockID = blockID
 	}
@@ -86,9 +86,9 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 
 	count := 8
 
-	blockIDs := make(hornet.MessageIDs, count)
+	blockIDs := make(iotago.BlockIDs, count)
 	for i := 0; i < count; i++ {
-		metadata, blockID := newMetadata(hornet.MessageIDs{hornet.NullMessageID()})
+		metadata, blockID := newMetadata(iotago.BlockIDs{iotago.EmptyBlockID()})
 		hps.OnNewSolidBlock(metadata)
 		blockIDs[i] = blockID
 	}
@@ -130,11 +130,11 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 	hps := newHPS()
 
 	numChains := 2
-	lastBlockIDs := make(hornet.MessageIDs, 2)
+	lastBlockIDs := make(iotago.BlockIDs, 2)
 	for i := 0; i < numChains; i++ {
-		lastBlockIDs[i] = hornet.NullMessageID()
+		lastBlockIDs[i] = iotago.EmptyBlockID()
 		for j := 1; j <= numTestBlocks; j++ {
-			metadata, blockID := newMetadata(hornet.MessageIDs{lastBlockIDs[i]})
+			metadata, blockID := newMetadata(iotago.BlockIDs{lastBlockIDs[i]})
 			hps.OnNewSolidBlock(metadata)
 			lastBlockIDs[i] = blockID
 		}
@@ -157,18 +157,18 @@ func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
 func BenchmarkHeaviestSelector_OnNewSolidBlock(b *testing.B) {
 	hps := newHPS()
 
-	blockIDs := hornet.MessageIDs{hornet.NullMessageID()}
+	blockIDs := iotago.BlockIDs{iotago.EmptyBlockID()}
 	blocks := make([]*inx.BlockMetadata, numBenchmarkBlocks)
 	for i := 0; i < numBenchmarkBlocks; i++ {
 		tipCount := 1 + rand.Intn(7)
 		if tipCount > len(blockIDs) {
 			tipCount = len(blockIDs)
 		}
-		tips := make(hornet.MessageIDs, tipCount)
+		tips := make(iotago.BlockIDs, tipCount)
 		for j := 0; j < tipCount; j++ {
 			tips[j] = blockIDs[rand.Intn(len(blockIDs))]
 		}
-		tips = tips.RemoveDupsAndSortByLexicalOrder()
+		tips = tips.RemoveDupsAndSort()
 
 		blocks[i], blockIDs[i] = newMetadata(tips)
 	}

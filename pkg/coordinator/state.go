@@ -1,19 +1,16 @@
 package coordinator
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // State stores the latest state of the coordinator.
 type State struct {
-	LatestMilestoneIndex   milestone.Index
-	LatestMilestoneBlockID hornet.MessageID
+	LatestMilestoneIndex   uint32
+	LatestMilestoneBlockID iotago.BlockID
 	LatestMilestoneID      iotago.MilestoneID
 	LatestMilestoneTime    time.Time
 }
@@ -28,9 +25,9 @@ type jsoncoostate struct {
 
 func (cs *State) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&jsoncoostate{
-		LatestMilestoneIndex:   uint32(cs.LatestMilestoneIndex),
-		LatestMilestoneBlockID: hex.EncodeToString(cs.LatestMilestoneBlockID),
-		LatestMilestoneID:      hex.EncodeToString(cs.LatestMilestoneID[:]),
+		LatestMilestoneIndex:   cs.LatestMilestoneIndex,
+		LatestMilestoneBlockID: cs.LatestMilestoneBlockID.ToHex(),
+		LatestMilestoneID:      cs.LatestMilestoneID.ToHex(),
 		LatestMilestoneTime:    cs.LatestMilestoneTime.UnixNano(),
 	})
 }
@@ -42,19 +39,19 @@ func (cs *State) UnmarshalJSON(data []byte) error {
 	}
 
 	var err error
-	cs.LatestMilestoneBlockID, err = hex.DecodeString(jsonCooState.LatestMilestoneBlockID)
+	cs.LatestMilestoneBlockID, err = iotago.BlockIDFromHexString(jsonCooState.LatestMilestoneBlockID)
 	if err != nil {
 		return err
 	}
 
-	latestMilestoneIDBytes, err := hex.DecodeString(jsonCooState.LatestMilestoneID)
+	latestMilestoneIDBytes, err := iotago.DecodeHex(jsonCooState.LatestMilestoneID)
 	if err != nil {
 		return err
 	}
 	cs.LatestMilestoneID = iotago.MilestoneID{}
 	copy(cs.LatestMilestoneID[:], latestMilestoneIDBytes)
 
-	cs.LatestMilestoneIndex = milestone.Index(jsonCooState.LatestMilestoneIndex)
+	cs.LatestMilestoneIndex = jsonCooState.LatestMilestoneIndex
 	cs.LatestMilestoneTime = time.Unix(0, jsonCooState.LatestMilestoneTime)
 
 	return nil

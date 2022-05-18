@@ -9,7 +9,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/plugins/migrator"
@@ -42,18 +41,13 @@ var (
 
 func provide(c *dig.Container) error {
 
-	type inxDeps struct {
-		dig.In
-		ShutdownHandler *shutdown.ShutdownHandler
-	}
-
 	type inxDepsOut struct {
 		dig.Out
 		Connection *grpc.ClientConn
 		INXClient  inx.INXClient
 	}
 
-	if err := c.Provide(func(deps inxDeps) (inxDepsOut, error) {
+	if err := c.Provide(func() (inxDepsOut, error) {
 		conn, err := grpc.Dial(ParamsINX.Address,
 			grpc.WithChainUnaryInterceptor(grpc_retry.UnaryClientInterceptor(), grpc_prometheus.UnaryClientInterceptor),
 			grpc.WithStreamInterceptor(grpc_prometheus.StreamClientInterceptor),

@@ -13,9 +13,6 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	"github.com/gohornet/hornet/pkg/keymanager"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
@@ -23,6 +20,7 @@ import (
 	"github.com/gohornet/inx-coordinator/pkg/nodebridge"
 	"github.com/gohornet/inx-coordinator/pkg/todo"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/crypto"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
@@ -32,11 +30,11 @@ import (
 )
 
 const (
-	// whether to bootstrap the network
+	// CfgCoordinatorBootstrap whether to bootstrap the network
 	CfgCoordinatorBootstrap = "cooBootstrap"
-	// the index of the first milestone at bootstrap
+	// CfgCoordinatorStartIndex the index of the first milestone at bootstrap
 	CfgCoordinatorStartIndex = "cooStartIndex"
-	// the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash)
+	// MilestoneMaxAdditionalTipsLimit the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash)
 	MilestoneMaxAdditionalTipsLimit = 6
 )
 
@@ -70,8 +68,8 @@ var (
 	heaviestSelectorLock syncutils.RWMutex
 
 	lastCheckpointIndex   int
-	lastCheckpointBlockID hornet.MessageID
-	lastMilestoneBlockID  hornet.MessageID
+	lastCheckpointBlockID iotago.BlockID
+	lastMilestoneBlockID  iotago.BlockID
 
 	// closures
 	onBlockSolid                *events.Closure
@@ -149,7 +147,7 @@ func provide(c *dig.Container) error {
 				return nil, err
 			}
 
-			if err := coo.InitState(*bootstrap, milestone.Index(*startIndex), deps.NodeBridge.LatestMilestone()); err != nil {
+			if err := coo.InitState(*bootstrap, *startIndex, deps.NodeBridge.LatestMilestone()); err != nil {
 				return nil, err
 			}
 
@@ -198,7 +196,7 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsCriticalError(err); err != nil {
-		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err))
+		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err), true)
 		return true
 	}
 
@@ -287,7 +285,7 @@ func run() error {
 				}()
 
 			case <-nextMilestoneSignal:
-				var milestoneTips hornet.MessageIDs
+				var milestoneTips iotago.BlockIDs
 
 				// issue a new checkpoint right in front of the milestone
 				checkpointTips, err := deps.Selector.SelectTips(1)
@@ -316,7 +314,7 @@ func run() error {
 					}
 				}
 
-				milestoneTips = append(milestoneTips, hornet.MessageIDs{lastMilestoneBlockID, lastCheckpointBlockID}...)
+				milestoneTips = append(milestoneTips, iotago.BlockIDs{lastMilestoneBlockID, lastCheckpointBlockID}...)
 
 				milestoneBlockID, err := deps.Coordinator.IssueMilestone(milestoneTips)
 				if handleError(err) {
@@ -414,7 +412,7 @@ func initSigningProvider(signingProviderType string, remoteEndpoint string, keyM
 	}
 }
 
-func sendBlock(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageID, error) {
+func sendBlock(block *iotago.Block, msIndex ...uint32) (iotago.BlockID, error) {
 
 	var err error
 
@@ -432,7 +430,7 @@ func sendBlock(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageI
 	var blockID iotago.BlockID
 	blockID, err = deps.NodeBridge.SubmitBlock(CoreComponent.Daemon().ContextStopped(), block)
 	if err != nil {
-		return nil, err
+		return iotago.EmptyBlockID(), err
 	}
 
 	blockSolidEventChan := deps.NodeBridge.RegisterBlockSolidEvent(context.Background(), blockID)
@@ -445,17 +443,17 @@ func sendBlock(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageI
 
 	// wait until the block is solid
 	if err = events.WaitForChannelClosed(context.Background(), blockSolidEventChan); err != nil {
-		return nil, err
+		return iotago.EmptyBlockID(), err
 	}
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
 		if err = events.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
-			return nil, err
+			return iotago.EmptyBlockID(), err
 		}
 	}
 
-	return hornet.MessageIDFromArray(blockID), nil
+	return blockID, nil
 }
 
 func configureEvents() {
@@ -495,11 +493,11 @@ func configureEvents() {
 		lastCheckpointIndex = 0
 	})
 
-	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, blockID hornet.MessageID) {
+	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, blockID iotago.BlockID) {
 		CoreComponent.LogInfof("checkpoint (%d) block issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, blockID.ToHex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index milestone.Index, milestoneID iotago.MilestoneID, blockID hornet.MessageID) {
+	onIssuedMilestone = events.NewClosure(func(index uint32, milestoneID iotago.MilestoneID, blockID iotago.BlockID) {
 		CoreComponent.LogInfof("milestone issued (%d) MilestoneID: %s, BlockID: %v", index, iotago.EncodeHex(milestoneID[:]), blockID.ToHex())
 	})
 }

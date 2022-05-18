@@ -10,8 +10,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/gohornet/hornet/pkg/common"
-	"github.com/gohornet/hornet/pkg/model/hornet"
-	"github.com/gohornet/hornet/pkg/model/milestone"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/ioutils"
@@ -28,11 +26,11 @@ import (
 type BackPressureFunc func() bool
 
 // SendBlockFunc is a function which sends a block to the network.
-type SendBlockFunc = func(block *iotago.Block, msIndex ...milestone.Index) (hornet.MessageID, error)
+type SendBlockFunc = func(block *iotago.Block, msIndex ...uint32) (iotago.BlockID, error)
 
 // LatestMilestoneInfo contains the info of the latest milestone the connected node knows.
 type LatestMilestoneInfo struct {
-	Index       milestone.Index
+	Index       uint32
 	Timestamp   uint32
 	MilestoneID iotago.MilestoneID
 }
@@ -70,13 +68,13 @@ type IsNodeSyncedFunc = func() bool
 
 // MilestoneMerkleRoots contains the merkle roots calculated by whiteflag confirmation.
 type MilestoneMerkleRoots struct {
-	// ConfirmedMerkleRoot is the root of the merkle tree containing the hash of all confirmed blocks.
-	ConfirmedMerkleRoot iotago.MilestoneMerkleProof
+	// InclusionMerkleRoot is the root of the merkle tree containing the hash of all included blocks.
+	InclusionMerkleRoot iotago.MilestoneMerkleProof
 	// AppliedMerkleRoot is the root of the merkle tree containing the hash of all include blocks that mutate the ledger.
 	AppliedMerkleRoot iotago.MilestoneMerkleProof
 }
 
-type ComputeMilestoneMerkleRoots = func(ctx context.Context, index milestone.Index, timestamp uint32, parents hornet.MessageIDs, previousMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
+type ComputeMilestoneMerkleRoots = func(ctx context.Context, index uint32, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
 
 // Coordinator is used to issue signed blocks, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
@@ -244,7 +242,7 @@ func New(
 
 // InitState loads an existing state file or bootstraps the network.
 // All errors are critical.
-func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, latestMilestone *LatestMilestoneInfo) error {
+func (coo *Coordinator) InitState(bootstrap bool, startIndex uint32, latestMilestone *LatestMilestoneInfo) error {
 
 	_, err := os.Stat(coo.opts.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
@@ -276,7 +274,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 
 		// create a new coordinator state to bootstrap the network
 		state := &State{}
-		state.LatestMilestoneBlockID = hornet.NullMessageID()
+		state.LatestMilestoneBlockID = iotago.EmptyBlockID()
 		state.LatestMilestoneID = latestMilestoneID
 		state.LatestMilestoneIndex = startIndex - 1
 		state.LatestMilestoneTime = time.Now()
@@ -310,9 +308,9 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex milestone.Index, la
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMilestoneIndex milestone.Index, previousMilestoneID iotago.MilestoneID) error {
+func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMilestoneIndex uint32, previousMilestoneID iotago.MilestoneID) error {
 
-	parents = parents.RemoveDupsAndSortByLexicalOrder()
+	parents = parents.RemoveDupsAndSort()
 
 	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
 	// This should be exactly the same one used when issuing the milestone later on.
@@ -397,7 +395,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 	// always reference the last milestone directly to speed up syncing
 	coo.state.LatestMilestoneBlockID = latestMilestoneBlockID
-	coo.state.LatestMilestoneID = *milestoneID
+	coo.state.LatestMilestoneID = milestoneID
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = newMilestoneTimestamp
 
@@ -412,7 +410,7 @@ func (coo *Coordinator) createAndSendMilestone(parents hornet.MessageIDs, newMil
 
 // Bootstrap creates the first milestone, if the network was not bootstrapped yet.
 // Returns critical errors.
-func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
+func (coo *Coordinator) Bootstrap() (iotago.BlockID, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
@@ -420,10 +418,10 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 	if !coo.bootstrapped {
 		// create first milestone to bootstrap the network
 		// only one parent references the last known milestone or NullMessageID if startIndex = 1 (see InitState)
-		err := coo.createAndSendMilestone(hornet.MessageIDs{coo.state.LatestMilestoneBlockID}, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID)
+		err := coo.createAndSendMilestone(iotago.BlockIDs{coo.state.LatestMilestoneBlockID}, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID)
 		if err != nil {
 			// creating milestone failed => always a critical error at bootstrap
-			return nil, common.CriticalError(err)
+			return iotago.EmptyBlockID(), common.CriticalError(err)
 		}
 
 		coo.bootstrapped = true
@@ -436,23 +434,23 @@ func (coo *Coordinator) Bootstrap() (hornet.MessageID, error) {
 // a checkpoint can contain multiple chained blocks to reference big parts of the unreferenced cone.
 // this is done to keep the confirmation rate as high as possible, even if there is an attack ongoing.
 // new checkpoints always reference the last checkpoint or the last milestone if it is the first checkpoint after a new milestone.
-func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlockID hornet.MessageID, tips hornet.MessageIDs) (hornet.MessageID, error) {
+func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlockID iotago.BlockID, tips iotago.BlockIDs) (iotago.BlockID, error) {
 
 	if len(tips) == 0 {
-		return nil, ErrNoTipsGiven
+		return iotago.EmptyBlockID(), ErrNoTipsGiven
 	}
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.isNodeSynced() {
-		return nil, common.SoftError(common.ErrNodeNotSynced)
+		return iotago.EmptyBlockID(), common.SoftError(common.ErrNodeNotSynced)
 	}
 
 	// check whether we should hold issuing checkpoints
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
+		return iotago.EmptyBlockID(), common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
 	// maximum 8 parents per block (7 tips + last checkpoint blockID)
@@ -467,18 +465,18 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlock
 			tipEnd = len(tips)
 		}
 
-		parents := hornet.MessageIDs{lastCheckpointBlockID}
+		parents := iotago.BlockIDs{lastCheckpointBlockID}
 		parents = append(parents, tips[tipStart:tipEnd]...)
-		parents = parents.RemoveDupsAndSortByLexicalOrder()
+		parents = parents.RemoveDupsAndSort()
 
 		block, err := coo.createCheckpoint(parents)
 		if err != nil {
-			return nil, common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
+			return iotago.EmptyBlockID(), common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
 		}
 
 		blockID, err := coo.sendBlockFunc(block)
 		if err != nil {
-			return nil, common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
+			return iotago.EmptyBlockID(), common.SoftError(fmt.Errorf("failed to send checkPoint: %w", err))
 		}
 
 		lastCheckpointBlockID = blockID
@@ -491,25 +489,25 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlock
 
 // IssueMilestone creates the next milestone.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) IssueMilestone(parents hornet.MessageIDs) (hornet.MessageID, error) {
+func (coo *Coordinator) IssueMilestone(parents iotago.BlockIDs) (iotago.BlockID, error) {
 
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
 	if !coo.isNodeSynced() {
 		// return a non-critical error to not kill the database
-		return nil, common.SoftError(common.ErrNodeNotSynced)
+		return iotago.EmptyBlockID(), common.SoftError(common.ErrNodeNotSynced)
 	}
 
 	// check whether we should hold issuing miletones
 	// if the node is currently under a lot of load
 	if coo.checkBackPressureFunctions() {
-		return nil, common.SoftError(common.ErrNodeLoadTooHigh)
+		return iotago.EmptyBlockID(), common.SoftError(common.ErrNodeLoadTooHigh)
 	}
 
 	if err := coo.createAndSendMilestone(parents, coo.state.LatestMilestoneIndex+1, coo.state.LatestMilestoneID); err != nil {
 		// creating milestone failed => non-critical or critical error
-		return nil, err
+		return iotago.EmptyBlockID(), err
 	}
 
 	return coo.state.LatestMilestoneBlockID, nil

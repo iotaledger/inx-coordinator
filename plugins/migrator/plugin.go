@@ -10,10 +10,10 @@ import (
 
 	"github.com/gohornet/hornet/pkg/common"
 	validator "github.com/gohornet/hornet/pkg/model/migrator"
-	"github.com/gohornet/hornet/pkg/shutdown"
 	"github.com/gohornet/inx-coordinator/pkg/daemon"
 	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/timeutil"
 	legacyapi "github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -120,7 +120,7 @@ func run() error {
 		deps.MigratorService.Start(ctx, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
-				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err))
+				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err), true)
 				return false
 			}
 
