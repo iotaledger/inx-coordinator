@@ -3,8 +3,8 @@ package coordinator
 import (
 	"time"
 
-	"github.com/gohornet/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 )
 
 type Quorum struct {

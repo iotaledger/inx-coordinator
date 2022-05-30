@@ -3,8 +3,8 @@ package migrator
 import (
 	"time"
 
-	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 )
 
 type ParametersMigrator struct {

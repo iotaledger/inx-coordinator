@@ -1,12 +1,12 @@
 package app
 
 import (
-	"github.com/gohornet/inx-app/inx"
-	"github.com/gohornet/inx-coordinator/core/coordinator"
-	"github.com/gohornet/inx-coordinator/plugins/migrator"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/app/plugins/profiling"
+	"github.com/iotaledger/inx-app/inx"
+	"github.com/iotaledger/inx-coordinator/core/coordinator"
+	"github.com/iotaledger/inx-coordinator/plugins/migrator"
 )
 
 var (
@@ -14,7 +14,7 @@ var (
 	Name = "inx-coordinator"
 
 	// Version of the app.
-	Version = "0.5.1"
+	Version = "0.6.0"
 )
 
 func App() *app.App {

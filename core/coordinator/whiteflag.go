@@ -3,7 +3,7 @@ package coordinator
 import (
 	"context"
 
-	"github.com/gohornet/inx-coordinator/pkg/coordinator"
+	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )

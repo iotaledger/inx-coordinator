@@ -7,10 +7,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/gohornet/hornet/pkg/common"
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/ioutils"
 	"github.com/iotaledger/hive.go/syncutils"
+	"github.com/iotaledger/hornet/pkg/common"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -160,7 +160,7 @@ func (s *MigratorService) InitState(msIndex *uint32) error {
 		return fmt.Errorf("%w: latest migrated at index must not be zero", ErrInvalidState)
 	}
 
-	//TODO: read this from the latest milestone metadata (https://github.com/gohornet/inx-coordinator/issues/2)
+	//TODO: read this from the latest milestone metadata (https://github.com/iotaledger/inx-coordinator/issues/2)
 	//if utxoManager != nil {
 	//	highestMigratedAtIndex, err := utxoManager.SearchHighestReceiptMigratedAtIndex()
 	//	if err != nil {
