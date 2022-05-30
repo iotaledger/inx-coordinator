@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/gohornet/inx-coordinator/pkg/migrator"
+	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

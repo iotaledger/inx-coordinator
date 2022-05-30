@@ -8,10 +8,10 @@ import (
 
 	flag "github.com/spf13/pflag"
 
-	coreDatabase "github.com/gohornet/hornet/core/database"
-	"github.com/gohornet/hornet/pkg/database"
-	"github.com/gohornet/hornet/pkg/model/storage"
-	"github.com/gohornet/inx-coordinator/pkg/coordinator"
+	coreDatabase "github.com/iotaledger/hornet/core/database"
+	"github.com/iotaledger/hornet/pkg/database"
+	"github.com/iotaledger/hornet/pkg/model/storage"
+	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 )
 
 func coordinatorFixStateFile(args []string) error {

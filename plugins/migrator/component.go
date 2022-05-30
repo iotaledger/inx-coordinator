@@ -8,13 +8,13 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/gohornet/hornet/pkg/common"
-	validator "github.com/gohornet/hornet/pkg/model/migrator"
-	"github.com/gohornet/inx-coordinator/pkg/daemon"
-	"github.com/gohornet/inx-coordinator/pkg/migrator"
 	"github.com/iotaledger/hive.go/app"
 	"github.com/iotaledger/hive.go/app/core/shutdown"
 	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hornet/pkg/common"
+	validator "github.com/iotaledger/hornet/pkg/model/migrator"
+	"github.com/iotaledger/inx-coordinator/pkg/daemon"
+	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	legacyapi "github.com/iotaledger/iota.go/api"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
