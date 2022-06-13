@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
@@ -345,6 +346,12 @@ func run() error {
 
 			case <-nextMilestoneSignal:
 				var milestoneTips iotago.BlockIDs
+
+				// skip signal to prevent milestone issuance with same timestamp
+				if deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
+					CoreComponent.LogWarn("skipping milestone signal due to too fast ticker")
+					continue
+				}
 
 				// issue a new checkpoint right in front of the milestone
 				checkpointTips, err := deps.Selector.SelectTips(1)
