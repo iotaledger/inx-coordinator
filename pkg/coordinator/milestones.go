@@ -12,8 +12,9 @@ import (
 func (coo *Coordinator) createCheckpoint(parents iotago.BlockIDs) (*iotago.Block, error) {
 
 	iotaBlock, err := builder.
-		NewBlockBuilder(coo.protoParas.Version).
-		ParentsBlockIDs(parents).
+		NewBlockBuilder().
+		ProtocolVersion(coo.protoParas.Version).
+		Parents(parents).
 		Build()
 	if err != nil {
 		return nil, err
@@ -45,8 +46,9 @@ func (coo *Coordinator) createMilestone(index uint32, timestamp uint32, parents 
 	}
 
 	iotaBlock, err := builder.
-		NewBlockBuilder(coo.protoParas.Version).
-		ParentsBlockIDs(parents).
+		NewBlockBuilder().
+		ProtocolVersion(coo.protoParas.Version).
+		Parents(parents).
 		Payload(msPayload).
 		Build()
 	if err != nil {
