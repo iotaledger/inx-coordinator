@@ -13,7 +13,7 @@ require (
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220621104034-d2f8a5e6287e
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
-	github.com/stretchr/testify v1.7.4
+	github.com/stretchr/testify v1.8.0
 	go.uber.org/dig v1.14.1
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
 	google.golang.org/grpc v1.47.0
