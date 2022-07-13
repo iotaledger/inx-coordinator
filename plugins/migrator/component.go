@@ -104,7 +104,7 @@ func provide(c *dig.Container) error {
 
 func configure() error {
 
-	var msIndex *uint32
+	var msIndex *iotago.MilestoneIndex
 	if *bootstrap {
 		msIndex = startIndex
 	}

@@ -4,13 +4,13 @@ go 1.18
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.2
-	github.com/iotaledger/hive.go v0.0.0-20220713073236-dc87603c259d
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713073236-dc87603c259d
-	github.com/iotaledger/hornet v1.1.0-rc1.0.20220621111400-f5426c2ac1ae
-	github.com/iotaledger/inx-app v0.0.0-20220713085302-9c589842393a
+	github.com/iotaledger/hive.go v0.0.0-20220713112541-3bfe06a592ed
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713112541-3bfe06a592ed
+	github.com/iotaledger/hornet v1.1.0-rc1.0.20220713113822-e9068836a87f
+	github.com/iotaledger/inx-app v0.0.0-20220713113726-e61674a965b5
 	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220705124454-acc836567dfb
+	github.com/iotaledger/iota.go/v3 v3.0.0-20220713111307-e56bfeff5451
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.0

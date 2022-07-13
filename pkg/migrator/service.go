@@ -42,8 +42,8 @@ func MigratedFundsCaller(handler interface{}, params ...interface{}) {
 
 // Queryer defines the interface used to query the migrated funds.
 type Queryer interface {
-	QueryMigratedFunds(uint32) ([]*iotago.MigratedFundsEntry, error)
-	QueryNextMigratedFunds(uint32) (uint32, []*iotago.MigratedFundsEntry, error)
+	QueryMigratedFunds(iotago.MilestoneIndex) ([]*iotago.MigratedFundsEntry, error)
+	QueryNextMigratedFunds(iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error)
 }
 
 // MigratorService is a service querying and validating batches of migrated funds.
@@ -62,13 +62,13 @@ type MigratorService struct {
 
 // State stores the latest state of the MigratorService.
 type State struct {
-	LatestMigratedAtIndex uint32 `json:"latestMigratedAtIndex"`
-	LatestIncludedIndex   uint32 `json:"latestIncludedIndex"`
-	SendingReceipt        bool   `json:"sendingReceipt"`
+	LatestMigratedAtIndex iotago.MilestoneIndex `json:"latestMigratedAtIndex"`
+	LatestIncludedIndex   uint32                `json:"latestIncludedIndex"`
+	SendingReceipt        bool                  `json:"sendingReceipt"`
 }
 
 type migrationResult struct {
-	stopIndex     uint32
+	stopIndex     iotago.MilestoneIndex
 	lastBatch     bool
 	migratedFunds []*iotago.MigratedFundsEntry
 }
@@ -130,7 +130,7 @@ func (s *MigratorService) PersistState(sendingReceipt bool) error {
 // otherwise the state is loaded from file.
 // The optional utxoManager is used to validate the initialized state against the DB.
 // InitState must be called before Start.
-func (s *MigratorService) InitState(msIndex *uint32) error {
+func (s *MigratorService) InitState(msIndex *iotago.MilestoneIndex) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -184,7 +184,7 @@ type OnServiceErrorFunc func(err error) (terminate bool)
 
 // Start stats the MigratorService s, it stops when the given context is done.
 func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc) {
-	var startIndex uint32
+	var startIndex iotago.MilestoneIndex
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
 		if err != nil {
@@ -224,7 +224,7 @@ func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc)
 // stateMigrations queries the next existing migrations after the current state.
 // It returns an empty slice, if the state corresponded to the last migration index of that milestone.
 // It returns an error if the current state contains an included migration index that is too large.
-func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntry, error) {
+func (s *MigratorService) stateMigrations() (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -241,7 +241,7 @@ func (s *MigratorService) stateMigrations() (uint32, []*iotago.MigratedFundsEntr
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.
 // If startIndex is 0 the indices from state are used.
-func (s *MigratorService) nextMigrations(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
+func (s *MigratorService) nextMigrations(startIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	if startIndex == 0 {
 		// for bootstrapping query the migrations corresponding to the state
 		msIndex, migratedFunds, err := s.stateMigrations()
@@ -270,7 +270,7 @@ func (s *MigratorService) updateState(result *migrationResult) {
 	s.state.LatestIncludedIndex += uint32(len(result.migratedFunds))
 }
 
-func createReceipt(migratedAt uint32, final bool, funds []*iotago.MigratedFundsEntry) *iotago.ReceiptMilestoneOpt {
+func createReceipt(migratedAt iotago.MilestoneIndex, final bool, funds []*iotago.MigratedFundsEntry) *iotago.ReceiptMilestoneOpt {
 	// never create an empty receipt
 	if len(funds) == 0 {
 		return nil

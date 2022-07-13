@@ -30,7 +30,7 @@ func (coo *Coordinator) createCheckpoint(parents iotago.BlockIDs) (*iotago.Block
 }
 
 // createMilestone creates a signed milestone block.
-func (coo *Coordinator) createMilestone(index uint32, timestamp uint32, parents iotago.BlockIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Block, error) {
+func (coo *Coordinator) createMilestone(index iotago.MilestoneIndex, timestamp uint32, parents iotago.BlockIDs, receipt *iotago.ReceiptMilestoneOpt, previousMilestoneID iotago.MilestoneID, merkleProof *MilestoneMerkleRoots) (*iotago.Block, error) {
 	milestoneIndexSigner := coo.signerProvider.MilestoneIndexSigner(index)
 	pubKeys := milestoneIndexSigner.PublicKeys()
 

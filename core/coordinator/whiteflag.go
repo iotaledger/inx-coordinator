@@ -8,7 +8,7 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ComputeMerkleTreeHash(ctx context.Context, msIndex uint32, msTimestamp uint32, parents iotago.BlockIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
+func ComputeMerkleTreeHash(ctx context.Context, msIndex iotago.MilestoneIndex, msTimestamp uint32, parents iotago.BlockIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 	req := &inx.WhiteFlagRequest{
 		MilestoneIndex:      msIndex,
 		MilestoneTimestamp:  msTimestamp,
