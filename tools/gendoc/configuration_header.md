@@ -20,7 +20,7 @@ You can change the path of the config file by using the `-c` or `--config` argum
 
 For example:
 ```bash
-inx-coordinator -c config_defaults.json.json
+inx-coordinator -c config_defaults.json
 ```
 
 You can always get the most up-to-date description of the config parameters by running:
