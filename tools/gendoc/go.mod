@@ -33,8 +33,8 @@ require (
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/iancoleman/orderedmap v0.2.0 // indirect
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713112541-3bfe06a592ed // indirect
-	github.com/iotaledger/hornet v1.1.0-rc1.0.20220621111400-f5426c2ac1ae // indirect
-	github.com/iotaledger/inx-app v0.0.0-20220713085302-9c589842393a // indirect
+	github.com/iotaledger/hornet v1.1.0-rc1.0.20220713113822-e9068836a87f // indirect
+	github.com/iotaledger/inx-app v0.0.0-20220713113726-e61674a965b5 // indirect
 	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e // indirect
 	github.com/iotaledger/iota.go v1.0.0 // indirect
 	github.com/iotaledger/iota.go/v3 v3.0.0-20220713111307-e56bfeff5451 // indirect
