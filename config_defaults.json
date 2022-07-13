@@ -1,10 +1,25 @@
 {
+  "app": {
+    "checkForUpdates": true,
+    "stopGracePeriod": "5m"
+  },
   "inx": {
     "address": "localhost:9029"
   },
   "coordinator": {
     "stateFilePath": "coordinator.state",
     "interval": "5s",
+    "signing": {
+      "provider": "local",
+      "remoteAddress": "localhost:12345",
+      "retryTimeout": "2s",
+      "retryAmount": 10
+    },
+    "quorum": {
+      "enabled": false,
+      "timeout": "2s",
+      "groups": {}
+    },
     "checkpoints": {
       "maxTrackedBlocks": 10000
     },
@@ -13,29 +28,10 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 3,
       "heaviestBranchSelectionTimeout": "100ms"
-    },
-    "signing": {
-      "provider": "local",
-      "remoteAddress": "localhost:12345",
-      "retryAmount": 10,
-      "retryTimeout": "2s"
-    },
-    "quorum": {
-      "enabled": false,
-      "groups": {
-        "hornet": [
-          {
-            "alias": "test01",
-            "baseURL": "http://localhost:14265",
-            "userName": "",
-            "password": ""
-          }
-        ]
-      },
-      "timeout": "2s"
     }
   },
   "migrator": {
+    "enabled": false,
     "stateFilePath": "migrator.state",
     "receiptMaxEntries": 110,
     "queryCooldownPeriod": "5s"
@@ -52,29 +48,8 @@
       }
     }
   },
-  "app": {
-    "disablePlugins": [],
-    "enablePlugins": [
-      "Profiling",
-      "Prometheus"
-    ]
-  },
-  "logger": {
-    "level": "info",
-    "disableCaller": true,
-    "encoding": "console",
-    "outputPaths": [
-      "stdout"
-    ]
-  },
   "profiling": {
+    "enabled": false,
     "bindAddress": "localhost:6060"
-  },
-  "prometheus": {
-    "bindAddress": "localhost:9311",
-    "coordinatorMetrics": true,
-    "goMetrics": false,
-    "processMetrics": false,
-    "promhttpMetrics": false
   }
 }

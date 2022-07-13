@@ -9,7 +9,7 @@ import (
 
 // State stores the latest state of the coordinator.
 type State struct {
-	LatestMilestoneIndex   uint32
+	LatestMilestoneIndex   iotago.MilestoneIndex
 	LatestMilestoneBlockID iotago.BlockID
 	LatestMilestoneID      iotago.MilestoneID
 	LatestMilestoneTime    time.Time

@@ -26,11 +26,11 @@ import (
 type BackPressureFunc func() bool
 
 // SendBlockFunc is a function which sends a block to the network.
-type SendBlockFunc = func(block *iotago.Block, msIndex ...uint32) (iotago.BlockID, error)
+type SendBlockFunc = func(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.BlockID, error)
 
 // LatestMilestoneInfo contains the info of the latest milestone the connected node knows.
 type LatestMilestoneInfo struct {
-	Index       uint32
+	Index       iotago.MilestoneIndex
 	Timestamp   uint32
 	MilestoneID iotago.MilestoneID
 }
@@ -76,7 +76,7 @@ type MilestoneMerkleRoots struct {
 	AppliedMerkleRoot iotago.MilestoneMerkleProof
 }
 
-type ComputeMilestoneMerkleRoots = func(ctx context.Context, index uint32, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
+type ComputeMilestoneMerkleRoots = func(ctx context.Context, index iotago.MilestoneIndex, timestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*MilestoneMerkleRoots, error)
 
 // Coordinator is used to issue signed blocks, called "milestones" to secure an IOTA network and prevent double spends.
 type Coordinator struct {
@@ -244,7 +244,7 @@ func New(
 
 // InitState loads an existing state file or bootstraps the network.
 // All errors are critical.
-func (coo *Coordinator) InitState(bootstrap bool, startIndex uint32, latestMilestone *LatestMilestoneInfo) error {
+func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneIndex, latestMilestone *LatestMilestoneInfo) error {
 
 	_, err := os.Stat(coo.opts.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
@@ -310,7 +310,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex uint32, latestMiles
 
 // createAndSendMilestone creates a milestone, sends it to the network and stores a new coordinator state file.
 // Returns non-critical and critical errors.
-func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMilestoneIndex uint32, previousMilestoneID iotago.MilestoneID) error {
+func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMilestoneIndex iotago.MilestoneIndex, previousMilestoneID iotago.MilestoneID) error {
 
 	parents = parents.RemoveDupsAndSort()
 

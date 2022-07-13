@@ -121,7 +121,7 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleR
 	wg *sync.WaitGroup,
 	quorumDoneChan chan struct{},
 	quorumErrChan chan error,
-	index uint32,
+	index iotago.MilestoneIndex,
 	timestamp uint32,
 	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,
@@ -198,7 +198,7 @@ QuorumLoop:
 // If no node of a certain group answers, a non-critical error is returned.
 // If one of the nodes returns a different hash, a critical error is returned.
 func (q *quorum) checkMerkleTreeHash(cooMerkleProof *MilestoneMerkleRoots,
-	index uint32,
+	index iotago.MilestoneIndex,
 	timestamp uint32,
 	parents iotago.BlockIDs,
 	previousMilestoneID iotago.MilestoneID,

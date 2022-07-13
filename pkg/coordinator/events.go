@@ -11,7 +11,7 @@ func CheckpointCaller(handler interface{}, params ...interface{}) {
 
 // MilestoneCaller is used to signal issued milestones.
 func MilestoneCaller(handler interface{}, params ...interface{}) {
-	handler.(func(index uint32, milestoneID iotago.MilestoneID, blockID iotago.BlockID))(params[0].(uint32), params[1].(iotago.MilestoneID), params[2].(iotago.BlockID))
+	handler.(func(index iotago.MilestoneIndex, milestoneID iotago.MilestoneID, blockID iotago.BlockID))(params[0].(iotago.MilestoneIndex), params[1].(iotago.MilestoneID), params[2].(iotago.BlockID))
 }
 
 // QuorumFinishedCaller is used to signal a finished quorum call.

@@ -96,7 +96,7 @@ func TestRestoreState(t *testing.T) {
 	require.Subset(t, serviceTests.entries, receipt2.Funds)
 }
 
-func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.MigratorService, func()) {
+func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int) (*migrator.MigratorService, func()) {
 	s := migrator.NewService(&mockQueryer{}, stateFileName, maxEntries)
 
 	if msIndex > 0 {
@@ -126,14 +126,14 @@ func newTestService(t *testing.T, msIndex uint32, maxEntries int) (*migrator.Mig
 
 type mockQueryer struct{}
 
-func (mockQueryer) QueryMigratedFunds(msIndex uint32) ([]*iotago.MigratedFundsEntry, error) {
+func (mockQueryer) QueryMigratedFunds(msIndex iotago.MilestoneIndex) ([]*iotago.MigratedFundsEntry, error) {
 	if msIndex == serviceTests.migratedAt {
 		return serviceTests.entries, nil
 	}
 	return nil, nil
 }
 
-func (mockQueryer) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.MigratedFundsEntry, error) {
+func (mockQueryer) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	if startIndex <= serviceTests.migratedAt {
 		return serviceTests.migratedAt, serviceTests.entries, nil
 	}
@@ -141,7 +141,7 @@ func (mockQueryer) QueryNextMigratedFunds(startIndex uint32) (uint32, []*iotago.
 }
 
 var serviceTests = struct {
-	migratedAt uint32
+	migratedAt iotago.MilestoneIndex
 	entries    []*iotago.MigratedFundsEntry
 }{
 	migratedAt: 2,

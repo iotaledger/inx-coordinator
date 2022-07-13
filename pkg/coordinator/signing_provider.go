@@ -3,15 +3,14 @@ package coordinator
 import (
 	"crypto/ed25519"
 
-	"github.com/iotaledger/hornet/pkg/keymanager"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 // MilestoneSignerProvider provides milestone signers.
 type MilestoneSignerProvider interface {
 	// MilestoneIndexSigner returns a new signer for the milestone index.
-	MilestoneIndexSigner(index uint32) MilestoneIndexSigner
+	MilestoneIndexSigner(index iotago.MilestoneIndex) MilestoneIndexSigner
 	// PublicKeysCount returns the amount of public keys in a milestone.
 	PublicKeysCount() int
 }
@@ -44,11 +43,11 @@ func NewInMemoryEd25519MilestoneSignerProvider(privateKeys []ed25519.PrivateKey,
 }
 
 // MilestoneIndexSigner returns a new signer for the milestone index.
-func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index uint32) MilestoneIndexSigner {
+func (p *InMemoryEd25519MilestoneSignerProvider) MilestoneIndexSigner(index iotago.MilestoneIndex) MilestoneIndexSigner {
 
-	pubKeySet := p.keyManger.PublicKeysSetForMilestoneIndex(milestone.Index(index))
+	pubKeySet := p.keyManger.PublicKeysSetForMilestoneIndex(index)
 
-	keyPairs := p.keyManger.MilestonePublicKeyMappingForMilestoneIndex(milestone.Index(index), p.privateKeys, p.PublicKeysCount())
+	keyPairs := p.keyManger.MilestonePublicKeyMappingForMilestoneIndex(index, p.privateKeys, p.PublicKeysCount())
 	pubKeys := make([]iotago.MilestonePublicKey, 0, len(keyPairs))
 	for pubKey := range keyPairs {
 		pubKeys = append(pubKeys, pubKey)
@@ -108,11 +107,11 @@ func NewInsecureRemoteEd25519MilestoneSignerProvider(remoteEndpoint string, keyM
 }
 
 // MilestoneIndexSigner returns a new signer for the milestone index.
-func (p *InsecureRemoteEd25519MilestoneSignerProvider) MilestoneIndexSigner(index uint32) MilestoneIndexSigner {
+func (p *InsecureRemoteEd25519MilestoneSignerProvider) MilestoneIndexSigner(index iotago.MilestoneIndex) MilestoneIndexSigner {
 
 	return &InsecureRemoteEd25519MilestoneIndexSigner{
-		pubKeys:     p.keyManger.PublicKeysForMilestoneIndex(milestone.Index(index)),
-		pubKeySet:   p.keyManger.PublicKeysSetForMilestoneIndex(milestone.Index(index)),
+		pubKeys:     p.keyManger.PublicKeysForMilestoneIndex(index),
+		pubKeySet:   p.keyManger.PublicKeysSetForMilestoneIndex(index),
 		signingFunc: p.signingFunc,
 	}
 }

@@ -19,8 +19,6 @@ import (
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
 	"github.com/iotaledger/hornet/pkg/common"
-	"github.com/iotaledger/hornet/pkg/keymanager"
-	"github.com/iotaledger/hornet/pkg/model/milestone"
 	"github.com/iotaledger/inx-app/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/inx-coordinator/pkg/daemon"
@@ -29,6 +27,7 @@ import (
 	"github.com/iotaledger/inx-coordinator/pkg/todo"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/keymanager"
 )
 
 const (
@@ -128,7 +127,7 @@ func provide(c *dig.Container) error {
 
 			keyManager := keymanager.New()
 			for _, keyRange := range deps.NodeBridge.NodeConfig.GetMilestoneKeyRanges() {
-				keyManager.AddKeyRange(keyRange.GetPublicKey(), milestone.Index(keyRange.GetStartIndex()), milestone.Index(keyRange.GetEndIndex()))
+				keyManager.AddKeyRange(keyRange.GetPublicKey(), iotago.MilestoneIndex(keyRange.GetStartIndex()), iotago.MilestoneIndex(keyRange.GetEndIndex()))
 			}
 
 			signingProvider, err := initSigningProvider(
@@ -478,7 +477,7 @@ func initSigningProvider(signingProviderType string, remoteEndpoint string, keyM
 	}
 }
 
-func sendBlock(block *iotago.Block, msIndex ...uint32) (iotago.BlockID, error) {
+func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.BlockID, error) {
 
 	var err error
 
@@ -563,7 +562,7 @@ func configureEvents() {
 		CoreComponent.LogInfof("checkpoint (%d) block issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, blockID.ToHex())
 	})
 
-	onIssuedMilestone = events.NewClosure(func(index uint32, milestoneID iotago.MilestoneID, blockID iotago.BlockID) {
+	onIssuedMilestone = events.NewClosure(func(index iotago.MilestoneIndex, milestoneID iotago.MilestoneID, blockID iotago.BlockID) {
 		CoreComponent.LogInfof("milestone issued (%d) MilestoneID: %s, BlockID: %v", index, iotago.EncodeHex(milestoneID[:]), blockID.ToHex())
 	})
 }
