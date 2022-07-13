@@ -1,4 +1,8 @@
 {
+  "app": {
+    "checkForUpdates": true,
+    "stopGracePeriod": "5m"
+  },
   "inx": {
     "address": "localhost:9029"
   },
@@ -52,13 +56,6 @@
       }
     }
   },
-  "app": {
-    "disablePlugins": [],
-    "enablePlugins": [
-      "Profiling",
-      "Prometheus"
-    ]
-  },
   "logger": {
     "level": "info",
     "disableCaller": true,
@@ -68,9 +65,11 @@
     ]
   },
   "profiling": {
+    "enabled": true,
     "bindAddress": "localhost:6060"
   },
   "prometheus": {
+    "enabled": true,
     "bindAddress": "localhost:9311",
     "coordinatorMetrics": true,
     "goMetrics": false,

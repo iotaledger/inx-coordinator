@@ -28,7 +28,6 @@ const (
 
 func init() {
 	Plugin = &app.Plugin{
-		Status: app.StatusDisabled,
 		Component: &app.Component{
 			Name:      "Migrator",
 			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
@@ -36,6 +35,9 @@ func init() {
 			Provide:   provide,
 			Configure: configure,
 			Run:       run,
+		},
+		IsEnabled: func() bool {
+			return ParamsMigrator.Enabled
 		},
 	}
 }
@@ -108,7 +110,7 @@ func configure() error {
 	}
 
 	if err := deps.MigratorService.InitState(msIndex); err != nil {
-		Plugin.LogFatalf("failed to initialize migrator: %s", err)
+		Plugin.LogFatalfAndExit("failed to initialize migrator: %s", err)
 	}
 	return nil
 }
