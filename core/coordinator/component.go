@@ -18,7 +18,7 @@ import (
 	"github.com/iotaledger/hive.go/events"
 	"github.com/iotaledger/hive.go/syncutils"
 	"github.com/iotaledger/hive.go/timeutil"
-	"github.com/iotaledger/hornet/pkg/common"
+	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-app/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/inx-coordinator/pkg/daemon"

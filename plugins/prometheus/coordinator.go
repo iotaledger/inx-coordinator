@@ -4,7 +4,7 @@ package prometheus
 import (
 	"github.com/prometheus/client_golang/prometheus"
 
-	"github.com/iotaledger/hornet/tools/inx-coordinator/coordinator"
+	"github.com/iotaledger/hornet/v2/tools/inx-coordinator/coordinator"
 
 	"github.com/iotaledger/hive.go/events"
 )
