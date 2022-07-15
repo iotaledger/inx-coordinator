@@ -4,13 +4,13 @@ go 1.18
 
 require (
 	github.com/bits-and-blooms/bitset v1.2.2
-	github.com/iotaledger/hive.go v0.0.0-20220713112541-3bfe06a592ed
-	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220713112541-3bfe06a592ed
-	github.com/iotaledger/hornet v1.1.0-rc1.0.20220713113822-e9068836a87f
-	github.com/iotaledger/inx-app v0.0.0-20220713113726-e61674a965b5
-	github.com/iotaledger/inx/go v0.0.0-20220705124918-775bb201b49e
+	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
+	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6
+	github.com/iotaledger/hornet/v2 v2.0.0-alpha9.0.20220715125533-86c439f1a199
+	github.com/iotaledger/inx-app v1.0.0-beta.1
+	github.com/iotaledger/inx/go v1.0.0-beta.1
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-20220713111307-e56bfeff5451
+	github.com/iotaledger/iota.go/v3 v3.0.0-beta.1
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.0
@@ -52,7 +52,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.2 // indirect
 	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.36.0 // indirect
+	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/sasha-s/go-deadlock v0.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
@@ -66,7 +66,7 @@ require (
 	golang.org/x/sys v0.0.0-20220712014510-0a85c31ab51e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	golang.org/x/xerrors v0.0.0-20220609144429-65e65417b02f // indirect
-	google.golang.org/genproto v0.0.0-20220712132514-bdd2acd4974d // indirect
+	google.golang.org/genproto v0.0.0-20220714211235-042d03aeabc9 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
