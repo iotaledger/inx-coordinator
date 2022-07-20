@@ -10,7 +10,7 @@ require (
 	github.com/iotaledger/inx-app v1.0.0-beta.1
 	github.com/iotaledger/inx/go v1.0.0-beta.1
 	github.com/iotaledger/iota.go v1.0.0
-	github.com/iotaledger/iota.go/v3 v3.0.0-beta.1
+	github.com/iotaledger/iota.go/v3 v3.0.0-beta.2
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.8.0
