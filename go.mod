@@ -3,7 +3,7 @@ module github.com/iotaledger/inx-coordinator
 go 1.18
 
 require (
-	github.com/bits-and-blooms/bitset v1.2.2
+	github.com/bits-and-blooms/bitset v1.3.0
 	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6
 	github.com/iotaledger/hornet/v2 v2.0.0-beta.1.0.20220721081848-6838d5b9273b
