@@ -11,9 +11,11 @@ import (
 // createCheckpoint creates a checkpoint block.
 func (coo *Coordinator) createCheckpoint(parents iotago.BlockIDs) (*iotago.Block, error) {
 
+	protoParams := coo.protoParamsFunc()
+
 	iotaBlock, err := builder.
 		NewBlockBuilder().
-		ProtocolVersion(coo.protoParas.Version).
+		ProtocolVersion(protoParams.Version).
 		Parents(parents).
 		Build()
 	if err != nil {
@@ -21,7 +23,7 @@ func (coo *Coordinator) createCheckpoint(parents iotago.BlockIDs) (*iotago.Block
 	}
 
 	// Validate
-	_, err = iotaBlock.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas)
+	_, err = iotaBlock.Serialize(serializer.DeSeriModePerformValidation, protoParams)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +41,9 @@ func (coo *Coordinator) createMilestone(index iotago.MilestoneIndex, timestamp u
 	appliedMerkleRoot := [iotago.MilestoneMerkleProofLength]byte{}
 	copy(appliedMerkleRoot[:], merkleProof.AppliedMerkleRoot[:])
 
-	msPayload := iotago.NewMilestone(index, timestamp, coo.protoParas.Version, previousMilestoneID, parents, confMerkleRoot, appliedMerkleRoot)
+	protoParams := coo.protoParamsFunc()
+
+	msPayload := iotago.NewMilestone(index, timestamp, protoParams.Version, previousMilestoneID, parents, confMerkleRoot, appliedMerkleRoot)
 
 	if receipt != nil {
 		msPayload.Opts = iotago.MilestoneOpts{receipt}
@@ -47,7 +51,7 @@ func (coo *Coordinator) createMilestone(index iotago.MilestoneIndex, timestamp u
 
 	iotaBlock, err := builder.
 		NewBlockBuilder().
-		ProtocolVersion(coo.protoParas.Version).
+		ProtocolVersion(protoParams.Version).
 		Parents(parents).
 		Payload(msPayload).
 		Build()
@@ -64,7 +68,7 @@ func (coo *Coordinator) createMilestone(index iotago.MilestoneIndex, timestamp u
 	}
 
 	// Perform validation
-	if _, err := iotaBlock.Serialize(serializer.DeSeriModePerformValidation, coo.protoParas); err != nil {
+	if _, err := iotaBlock.Serialize(serializer.DeSeriModePerformValidation, protoParams); err != nil {
 		return nil, err
 	}
 

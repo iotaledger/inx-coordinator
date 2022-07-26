@@ -151,7 +151,7 @@ func provide(c *dig.Container) error {
 			coo, err := coordinator.New(
 				ComputeMerkleTreeHash,
 				deps.NodeBridge.IsNodeSynced,
-				deps.NodeBridge.ProtocolParameters(),
+				deps.NodeBridge.ProtocolParameters,
 				signingProvider,
 				deps.MigratorService,
 				treasuryListener.LatestTreasuryOutput,
