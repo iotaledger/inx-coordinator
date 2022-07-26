@@ -68,6 +68,9 @@ type Events struct {
 // IsNodeSyncedFunc should only return true if the node connected to the coordinator is synced.
 type IsNodeSyncedFunc = func() bool
 
+// ProtocolParameteresFunc should return the current valid protocol parameters.
+type ProtocolParameteresFunc = func() *iotago.ProtocolParameters
+
 // MilestoneMerkleRoots contains the merkle roots calculated by whiteflag confirmation.
 type MilestoneMerkleRoots struct {
 	// InclusionMerkleRoot is the root of the merkle tree containing the hash of all included blocks.
@@ -88,8 +91,8 @@ type Coordinator struct {
 	milestoneLock syncutils.Mutex
 	// used to determine the sync status of the node.
 	isNodeSynced IsNodeSyncedFunc
-	// Protocol parameters including byte costs
-	protoParas *iotago.ProtocolParameters
+	// Used to determine the current protocol parameters including byte costs.
+	protoParamsFunc ProtocolParameteresFunc
 	// used to get receipts for the WOTS migration.
 	migratorService *migrator.MigratorService
 	// used to get the treasury output.
@@ -205,7 +208,7 @@ type Option func(opts *Options)
 func New(
 	merkleRootFunc ComputeMilestoneMerkleRoots,
 	nodeSyncedFunc IsNodeSyncedFunc,
-	protoParas *iotago.ProtocolParameters,
+	protoParamsFunc ProtocolParameteresFunc,
 	signerProvider MilestoneSignerProvider,
 	migratorService *migrator.MigratorService,
 	treasuryOutputFunc UnspentTreasuryOutputFunc,
@@ -223,7 +226,7 @@ func New(
 	result := &Coordinator{
 		merkleRootFunc:     merkleRootFunc,
 		isNodeSynced:       nodeSyncedFunc,
-		protoParas:         protoParas,
+		protoParamsFunc:    protoParamsFunc,
 		signerProvider:     signerProvider,
 		migratorService:    migratorService,
 		treasuryOutputFunc: treasuryOutputFunc,
