@@ -137,29 +137,7 @@ Example:
   }
 ```
 
-## <a id="migrator"></a> 4. Migrator
-
-| Name                | Description                                                                                                           | Type    | Default value    |
-| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
-| enabled             | Whether the migrator plugin is enabled                                                                                | boolean | false            |
-| stateFilePath       | Path to the state file of the migrator                                                                                | string  | "migrator.state" |
-| receiptMaxEntries   | The max amount of entries to embed within a receipt                                                                   | int     | 110              |
-| queryCooldownPeriod | The cooldown period for the service to ask for new data from the legacy node in case the migrator encounters an error | string  | "5s"             |
-
-Example:
-
-```json
-  {
-    "migrator": {
-      "enabled": false,
-      "stateFilePath": "migrator.state",
-      "receiptMaxEntries": 110,
-      "queryCooldownPeriod": "5s"
-    }
-  }
-```
-
-## <a id="receipts"></a> 5. Receipts
+## <a id="receipts"></a> 4. Receipts
 
 | Name                             | Description                 | Type   | Default value |
 | -------------------------------- | --------------------------- | ------ | ------------- |
@@ -201,6 +179,28 @@ Example:
           "merkleTreeDepth": 24
         }
       }
+    }
+  }
+```
+
+## <a id="migrator"></a> 5. Migrator
+
+| Name                | Description                                                                                                           | Type    | Default value    |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------- | ------- | ---------------- |
+| enabled             | Whether the migrator plugin is enabled                                                                                | boolean | false            |
+| stateFilePath       | Path to the state file of the migrator                                                                                | string  | "migrator.state" |
+| receiptMaxEntries   | The max amount of entries to embed within a receipt                                                                   | int     | 110              |
+| queryCooldownPeriod | The cooldown period for the service to ask for new data from the legacy node in case the migrator encounters an error | string  | "5s"             |
+
+Example:
+
+```json
+  {
+    "migrator": {
+      "enabled": false,
+      "stateFilePath": "migrator.state",
+      "receiptMaxEntries": 110,
+      "queryCooldownPeriod": "5s"
     }
   }
 ```
