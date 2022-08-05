@@ -6,7 +6,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.3.0
 	github.com/iotaledger/hive.go v0.0.0-20220714075325-11202fe498d6
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-20220714075325-11202fe498d6
-	github.com/iotaledger/hornet/v2 v2.0.0-beta.3
+	github.com/iotaledger/hornet/v2 v2.0.0-beta.4
 	github.com/iotaledger/inx-app v1.0.0-beta.6
 	github.com/iotaledger/inx/go v1.0.0-beta.4
 	github.com/iotaledger/iota.go v1.0.0
