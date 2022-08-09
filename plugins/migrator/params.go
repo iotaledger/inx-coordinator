@@ -3,7 +3,7 @@ package migrator
 import (
 	"time"
 
-	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 )
 
