@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/inx-app/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 	inx "github.com/iotaledger/inx/go"

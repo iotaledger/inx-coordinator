@@ -30,6 +30,12 @@
       "heaviestBranchSelectionTimeout": "100ms"
     }
   },
+  "migrator": {
+    "enabled": false,
+    "stateFilePath": "migrator.state",
+    "receiptMaxEntries": 110,
+    "queryCooldownPeriod": "5s"
+  },
   "receipts": {
     "validator": {
       "api": {
@@ -41,12 +47,6 @@
         "merkleTreeDepth": 24
       }
     }
-  },
-  "migrator": {
-    "enabled": false,
-    "stateFilePath": "migrator.state",
-    "receiptMaxEntries": 110,
-    "queryCooldownPeriod": "5s"
   },
   "profiling": {
     "enabled": false,

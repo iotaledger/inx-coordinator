@@ -12,12 +12,12 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/app"
-	"github.com/iotaledger/hive.go/app/core/shutdown"
-	"github.com/iotaledger/hive.go/crypto"
-	"github.com/iotaledger/hive.go/events"
-	"github.com/iotaledger/hive.go/syncutils"
-	"github.com/iotaledger/hive.go/timeutil"
+	"github.com/iotaledger/hive.go/core/app"
+	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/crypto"
+	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-app/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
@@ -568,10 +568,10 @@ func configureEvents() {
 }
 
 func attachEvents() {
-	deps.TangleListener.Events.BlockSolid.Attach(onBlockSolid)
-	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Attach(onConfirmedMilestoneChanged)
-	deps.Coordinator.Events.IssuedCheckpointBlock.Attach(onIssuedCheckpoint)
-	deps.Coordinator.Events.IssuedMilestone.Attach(onIssuedMilestone)
+	deps.TangleListener.Events.BlockSolid.Hook(onBlockSolid)
+	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
+	deps.Coordinator.Events.IssuedCheckpointBlock.Hook(onIssuedCheckpoint)
+	deps.Coordinator.Events.IssuedMilestone.Hook(onIssuedMilestone)
 }
 
 func detachEvents() {
