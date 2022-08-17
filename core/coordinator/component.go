@@ -137,7 +137,7 @@ func provide(c *dig.Container) error {
 				int(deps.NodeBridge.NodeConfig.GetMilestonePublicKeyCount()),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
+				return nil, fmt.Errorf("failed to initialize signing provider: %w", err)
 			}
 
 			if ParamsCoordinator.Quorum.Enabled {

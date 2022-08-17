@@ -67,7 +67,7 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 	for {
 		update, err := stream.Recv()
 		if err != nil {
-			if err == io.EOF || status.Code(err) == codes.Canceled {
+			if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
 				break
 			}
 			n.LogErrorf("listenToTreasuryUpdates: %s", err.Error())
