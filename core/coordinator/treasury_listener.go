@@ -87,6 +87,10 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 func (n *TreasuryListener) Run(ctx context.Context) {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go n.listenToTreasuryUpdates(c, cancel)
+	go func() {
+		if err := n.listenToTreasuryUpdates(c, cancel); err != nil {
+			n.LogErrorf("listenToTreasuryUpdates: %s", err.Error())
+		}
+	}()
 	<-c.Done()
 }
