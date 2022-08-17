@@ -58,10 +58,12 @@ func (n *TreasuryListener) LatestTreasuryOutput() (*coordinator.LatestTreasuryOu
 
 func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
+
 	stream, err := n.nodeBridge.Client().ListenToTreasuryUpdates(ctx, &inx.MilestoneRangeRequest{})
 	if err != nil {
 		return err
 	}
+
 	for {
 		update, err := stream.Recv()
 		if err != nil {
@@ -78,6 +80,7 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 		n.processTreasuryUpdate(update)
 	}
 
+	//nolint:nilerr // false positive
 	return nil
 }
 
