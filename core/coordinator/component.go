@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	// CfgCoordinatorBootstrap defines whether to bootstrap the network
+	// CfgCoordinatorBootstrap defines whether to bootstrap the network.
 	CfgCoordinatorBootstrap = "cooBootstrap"
-	// CfgCoordinatorStartIndex defines the index of the first milestone at bootstrap
+	// CfgCoordinatorStartIndex defines the index of the first milestone at bootstrap.
 	CfgCoordinatorStartIndex = "cooStartIndex"
-	// MilestoneMaxAdditionalTipsLimit defines the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash)
+	// MilestoneMaxAdditionalTipsLimit defines the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash).
 	MilestoneMaxAdditionalTipsLimit = 6
 )
 
@@ -72,7 +72,7 @@ var (
 	lastCheckpointBlockID iotago.BlockID
 	lastMilestoneBlockID  iotago.BlockID
 
-	// closures
+	// closures.
 	onBlockSolid                *events.Closure
 	onConfirmedMilestoneChanged *events.Closure
 	onIssuedCheckpoint          *events.Closure

@@ -17,7 +17,7 @@ import (
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 
-	// import implementation
+	// import implementation.
 	_ "golang.org/x/crypto/blake2b"
 )
 
@@ -35,13 +35,13 @@ type LatestMilestoneInfo struct {
 	MilestoneID iotago.MilestoneID
 }
 
-// LatestTreasuryOutput represents the latest treasury output created by the last milestone that contained a migration
+// LatestTreasuryOutput represents the latest treasury output created by the last milestone that contained a migration.
 type LatestTreasuryOutput struct {
 	MilestoneID iotago.MilestoneID
 	Amount      uint64
 }
 
-// UnspentTreasuryOutputFunc should return the latest unspent LatestTreasuryOutput
+// UnspentTreasuryOutputFunc should return the latest unspent LatestTreasuryOutput.
 type UnspentTreasuryOutputFunc = func() (*LatestTreasuryOutput, error)
 
 var (
@@ -49,7 +49,7 @@ var (
 	ErrNoTipsGiven = errors.New("no tips given")
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
-	// ErrNodeLoadTooHigh is returned if the backpressure func says the node load is too high
+	// ErrNodeLoadTooHigh is returned if the backpressure func says the node load is too high.
 	ErrNodeLoadTooHigh = errors.New("node load too high")
 )
 
