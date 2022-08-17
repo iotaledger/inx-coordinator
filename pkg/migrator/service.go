@@ -37,6 +37,7 @@ type ServiceEvents struct {
 
 // MigratedFundsCaller is an event caller which gets migrated funds passed.
 func MigratedFundsCaller(handler interface{}, params ...interface{}) {
+	//nolint:forcetypeassert // we will replace that with generic events anyway
 	handler.(func([]*iotago.MigratedFundsEntry))(params[0].([]*iotago.MigratedFundsEntry))
 }
 
