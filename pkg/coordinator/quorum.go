@@ -28,7 +28,7 @@ type QuorumClientConfig struct {
 	// optional alias of the quorum client.
 	Alias string `json:"alias" koanf:"alias"`
 	// baseURL of the quorum client.
-	BaseURL string `json:"baseURL" koanf:"baseURL"`
+	BaseURL string `json:"baseUrl" koanf:"baseUrl"`
 	// optional username for basic auth.
 	UserName string `json:"userName" koanf:"userName"`
 	// optional password for basic auth.
