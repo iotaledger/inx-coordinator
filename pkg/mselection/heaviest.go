@@ -179,7 +179,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (iotago.BlockIDs, err
 	// and to get a frozen view of the tangle, so an attacker can't
 	// create heavier branches while we are searching the best tips
 	// caution: the tips are not copied, do not mutate!
-	tipsList := s.tipsToList()
+	tipsList := s.TipsToList()
 
 	// tips could be empty after a reset
 	if tipsList.Len() == 0 {
@@ -295,8 +295,8 @@ func (s *HeaviestSelector) removeTip(it *trackedBlock) {
 	it.tip = nil
 }
 
-// tipsToList returns a new list containing the current tips.
-func (s *HeaviestSelector) tipsToList() *trackedBlocksList {
+// TipsToList returns a new list containing the current tips.
+func (s *HeaviestSelector) TipsToList() *trackedBlocksList {
 	s.Lock()
 	defer s.Unlock()
 
