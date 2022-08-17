@@ -127,7 +127,7 @@ func provide(c *dig.Container) error {
 
 			keyManager := keymanager.New()
 			for _, keyRange := range deps.NodeBridge.NodeConfig.GetMilestoneKeyRanges() {
-				keyManager.AddKeyRange(keyRange.GetPublicKey(), iotago.MilestoneIndex(keyRange.GetStartIndex()), iotago.MilestoneIndex(keyRange.GetEndIndex()))
+				keyManager.AddKeyRange(keyRange.GetPublicKey(), keyRange.GetStartIndex(), keyRange.GetEndIndex())
 			}
 
 			signingProvider, err := initSigningProvider(
