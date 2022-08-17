@@ -52,7 +52,7 @@ var (
 
 type dependencies struct {
 	dig.In
-	MigratorService *migrator.MigratorService
+	MigratorService *migrator.Service
 	ShutdownHandler *shutdown.ShutdownHandler
 }
 
@@ -82,7 +82,7 @@ func provide(c *dig.Container) error {
 		Validator *validator.Validator
 	}
 
-	if err := c.Provide(func(deps serviceDeps) *migrator.MigratorService {
+	if err := c.Provide(func(deps serviceDeps) *migrator.Service {
 
 		maxReceiptEntries := ParamsMigrator.ReceiptMaxEntries
 		switch {

@@ -27,8 +27,8 @@ var (
 	ErrInvalidState = errors.New("invalid migrator state")
 )
 
-// MigratorServiceEvents are events happening around a MigratorService.
-type MigratorServiceEvents struct {
+// ServiceEvents are events happening around a MigratorService.
+type ServiceEvents struct {
 	// SoftError is triggered when a soft error is encountered.
 	SoftError *events.Event
 	// MigratedFundsFetched is triggered when new migration funds were fetched from a legacy node.
@@ -46,9 +46,9 @@ type Queryer interface {
 	QueryNextMigratedFunds(iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error)
 }
 
-// MigratorService is a service querying and validating batches of migrated funds.
-type MigratorService struct {
-	Events *MigratorServiceEvents
+// Service is a service querying and validating batches of migrated funds.
+type Service struct {
+	Events *ServiceEvents
 
 	queryer Queryer
 	state   State
@@ -74,9 +74,9 @@ type migrationResult struct {
 }
 
 // NewService creates a new MigratorService.
-func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *MigratorService {
-	return &MigratorService{
-		Events: &MigratorServiceEvents{
+func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *Service {
+	return &Service{
+		Events: &ServiceEvents{
 			SoftError:            events.NewEvent(events.ErrorCaller),
 			MigratedFundsFetched: events.NewEvent(MigratedFundsCaller),
 		},
@@ -92,7 +92,7 @@ func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *M
 // Receipt returns nil, if there are currently no new migrations available. Although the actual API calls and
 // validations happen in the background, Receipt might block until the next receipt is ready.
 // When s is stopped, Receipt will always return nil.
-func (s *MigratorService) Receipt() *iotago.ReceiptMilestoneOpt {
+func (s *Service) Receipt() *iotago.ReceiptMilestoneOpt {
 	// make the channel receive and the state update atomic, so that the state always matches the result
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -113,7 +113,7 @@ func (s *MigratorService) Receipt() *iotago.ReceiptMilestoneOpt {
 
 // PersistState persists the current state to a file.
 // PersistState must be called when the receipt returned by the last call of Receipt has been send to the network.
-func (s *MigratorService) PersistState(sendingReceipt bool) error {
+func (s *Service) PersistState(sendingReceipt bool) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	s.state.SendingReceipt = sendingReceipt
@@ -131,7 +131,7 @@ func (s *MigratorService) PersistState(sendingReceipt bool) error {
 // otherwise the state is loaded from file.
 // The optional utxoManager is used to validate the initialized state against the DB.
 // InitState must be called before Start.
-func (s *MigratorService) InitState(msIndex *iotago.MilestoneIndex) error {
+func (s *Service) InitState(msIndex *iotago.MilestoneIndex) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -185,7 +185,7 @@ func (s *MigratorService) InitState(msIndex *iotago.MilestoneIndex) error {
 type OnServiceErrorFunc func(err error) (terminate bool)
 
 // Start stats the MigratorService s, it stops when the given context is done.
-func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc) {
+func (s *Service) Start(ctx context.Context, onError OnServiceErrorFunc) {
 	var startIndex iotago.MilestoneIndex
 	for {
 		msIndex, migratedFunds, err := s.nextMigrations(startIndex)
@@ -229,7 +229,7 @@ func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc)
 // stateMigrations queries the next existing migrations after the current state.
 // It returns an empty slice, if the state corresponded to the last migration index of that milestone.
 // It returns an error if the current state contains an included migration index that is too large.
-func (s *MigratorService) stateMigrations() (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
+func (s *Service) stateMigrations() (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
@@ -247,7 +247,7 @@ func (s *MigratorService) stateMigrations() (iotago.MilestoneIndex, []*iotago.Mi
 
 // nextMigrations queries the next existing migrations starting from milestone index startIndex.
 // If startIndex is 0 the indices from state are used.
-func (s *MigratorService) nextMigrations(startIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
+func (s *Service) nextMigrations(startIndex iotago.MilestoneIndex) (iotago.MilestoneIndex, []*iotago.MigratedFundsEntry, error) {
 	if startIndex == 0 {
 		// for bootstrapping query the migrations corresponding to the state
 		msIndex, migratedFunds, err := s.stateMigrations()
@@ -265,7 +265,7 @@ func (s *MigratorService) nextMigrations(startIndex iotago.MilestoneIndex) (iota
 	return s.queryer.QueryNextMigratedFunds(startIndex)
 }
 
-func (s *MigratorService) updateState(result *migrationResult) {
+func (s *Service) updateState(result *migrationResult) {
 	if result.stopIndex < s.state.LatestMigratedAtIndex {
 		panic("invalid stop index")
 	}

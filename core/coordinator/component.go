@@ -105,7 +105,7 @@ func provide(c *dig.Container) error {
 
 	type coordinatorDeps struct {
 		dig.In
-		MigratorService *migrator.MigratorService `optional:"true"`
+		MigratorService *migrator.Service `optional:"true"`
 		NodeBridge      *nodebridge.NodeBridge
 	}
 

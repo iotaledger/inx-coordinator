@@ -8,12 +8,12 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-func ComputeMerkleTreeHash(ctx context.Context, msIndex iotago.MilestoneIndex, msTimestamp uint32, parents iotago.BlockIDs, previousMilestoneId iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
+func ComputeMerkleTreeHash(ctx context.Context, msIndex iotago.MilestoneIndex, msTimestamp uint32, parents iotago.BlockIDs, previousMilestoneID iotago.MilestoneID) (*coordinator.MilestoneMerkleRoots, error) {
 	req := &inx.WhiteFlagRequest{
 		MilestoneIndex:      msIndex,
 		MilestoneTimestamp:  msTimestamp,
 		Parents:             inx.NewBlockIds(parents),
-		PreviousMilestoneId: inx.NewMilestoneId(previousMilestoneId),
+		PreviousMilestoneId: inx.NewMilestoneId(previousMilestoneID),
 	}
 
 	res, err := deps.NodeBridge.Client().ComputeWhiteFlag(ctx, req)

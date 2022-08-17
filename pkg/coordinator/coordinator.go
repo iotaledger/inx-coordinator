@@ -94,7 +94,7 @@ type Coordinator struct {
 	// Used to determine the current protocol parameters including byte costs.
 	protoParamsFunc ProtocolParameteresFunc
 	// used to get receipts for the WOTS migration.
-	migratorService *migrator.MigratorService
+	migratorService *migrator.Service
 	// used to get the treasury output.
 	treasuryOutputFunc UnspentTreasuryOutputFunc
 	// used to sign the milestones.
@@ -211,7 +211,7 @@ func New(
 	nodeSyncedFunc IsNodeSyncedFunc,
 	protoParamsFunc ProtocolParameteresFunc,
 	signerProvider MilestoneSignerProvider,
-	migratorService *migrator.MigratorService,
+	migratorService *migrator.Service,
 	treasuryOutputFunc UnspentTreasuryOutputFunc,
 	sendBlockFunc SendBlockFunc,
 	opts ...Option) (*Coordinator, error) {

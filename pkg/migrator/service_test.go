@@ -96,7 +96,7 @@ func TestRestoreState(t *testing.T) {
 	require.Subset(t, serviceTests.entries, receipt2.Funds)
 }
 
-func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int) (*migrator.MigratorService, func()) {
+func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int) (*migrator.Service, func()) {
 	s := migrator.NewService(&mockQueryer{}, stateFileName, maxEntries)
 
 	if msIndex > 0 {
