@@ -153,6 +153,7 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleR
 					onGroupEntryError(groupName, entry, err)
 				}
 				nodeErrorChan <- err
+
 				return
 			}
 			nodeResultChan <- response
@@ -177,6 +178,7 @@ QuorumLoop:
 				cooMerkleProof.InclusionMerkleRoot != nodeWhiteFlagResponse.InclusionMerkleRoot {
 				// mismatch of the merkle tree hash of the node => critical error
 				quorumErrChan <- common.CriticalError(ErrQuorumMerkleTreeHashMismatch)
+
 				return
 			}
 			validResults++

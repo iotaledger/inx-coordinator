@@ -195,6 +195,7 @@ func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfi
 	return func(opts *Options) {
 		if !quorumEnabled {
 			opts.quorum = nil
+
 			return
 		}
 		opts.quorum = newQuorum(quorumGroups, timeout)
@@ -308,6 +309,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneInd
 	coo.LogInfof("resuming coordinator at %d", latestMilestone.Index)
 
 	coo.bootstrapped = true
+
 	return nil
 }
 
@@ -342,6 +344,7 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 		if err != nil {
 			// quorum failed => non-critical or critical error
 			coo.LogInfof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
+
 			return err
 		}
 
@@ -541,6 +544,7 @@ func (coo *Coordinator) checkBackPressureFunctions() bool {
 			return true
 		}
 	}
+
 	return false
 }
 

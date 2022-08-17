@@ -102,6 +102,7 @@ func New(minHeaviestBranchUnreferencedBlocksThreshold int, maxHeaviestBranchTips
 		heaviestBranchSelectionTimeout:               heaviestBranchSelectionTimeout,
 	}
 	s.Reset()
+
 	return s
 }
 
@@ -302,6 +303,7 @@ func (s *HeaviestSelector) tipsToList() *trackedBlocksList {
 		tip := e.Value.(*trackedBlock)
 		result[tip.blockID] = tip
 	}
+
 	return &trackedBlocksList{blocks: result}
 }
 

@@ -117,6 +117,7 @@ func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int)
 	}()
 
 	<-started
+
 	return s, func() {
 		ctxCancel()
 		// we don't need to check the error, maybe the file doesn't exist
@@ -130,6 +131,7 @@ func (mockQueryer) QueryMigratedFunds(msIndex iotago.MilestoneIndex) ([]*iotago.
 	if msIndex == serviceTests.migratedAt {
 		return serviceTests.entries, nil
 	}
+
 	return nil, nil
 }
 
@@ -137,6 +139,7 @@ func (mockQueryer) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (iot
 	if startIndex <= serviceTests.migratedAt {
 		return serviceTests.migratedAt, serviceTests.entries, nil
 	}
+
 	return serviceTests.migratedAt, nil, nil
 }
 

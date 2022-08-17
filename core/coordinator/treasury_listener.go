@@ -69,6 +69,7 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 				break
 			}
 			n.LogErrorf("listenToTreasuryUpdates: %s", err.Error())
+
 			break
 		}
 		if ctx.Err() != nil {
@@ -76,6 +77,7 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 		}
 		n.processTreasuryUpdate(update)
 	}
+
 	return nil
 }
 

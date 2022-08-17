@@ -107,6 +107,7 @@ func (s *MigratorService) Receipt() *iotago.ReceiptMilestoneOpt {
 		return nil
 	}
 	s.updateState(result)
+
 	return createReceipt(result.stopIndex, result.lastBatch, result.migratedFunds)
 }
 
@@ -174,6 +175,7 @@ func (s *MigratorService) InitState(msIndex *iotago.MilestoneIndex) error {
 	//}
 
 	s.state = state
+
 	return nil
 }
 
@@ -190,8 +192,10 @@ func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc)
 		if err != nil {
 			if onError != nil && !onError(err) {
 				close(s.migrations)
+
 				return
 			}
+
 			continue
 		}
 
@@ -211,6 +215,7 @@ func (s *MigratorService) Start(ctx context.Context, onError OnServiceErrorFunc)
 			case s.migrations <- &migrationResult{msIndex, lastBatch, batch}:
 			case <-ctx.Done():
 				close(s.migrations)
+
 				return
 			}
 			migratedFunds = migratedFunds[len(batch):]
@@ -236,6 +241,7 @@ func (s *MigratorService) stateMigrations() (iotago.MilestoneIndex, []*iotago.Mi
 	if l >= s.state.LatestIncludedIndex {
 		return s.state.LatestMigratedAtIndex, migratedFunds[s.state.LatestIncludedIndex:], nil
 	}
+
 	return 0, nil, common.CriticalError(fmt.Errorf("%w: state at index %d but only %d migrations", ErrInvalidState, s.state.LatestIncludedIndex, l))
 }
 
@@ -255,6 +261,7 @@ func (s *MigratorService) nextMigrations(startIndex iotago.MilestoneIndex) (iota
 		// otherwise query the next available migrations
 		startIndex = msIndex + 1
 	}
+
 	return s.queryer.QueryNextMigratedFunds(startIndex)
 }
 
@@ -275,6 +282,7 @@ func createReceipt(migratedAt iotago.MilestoneIndex, final bool, funds []*iotago
 	if len(funds) == 0 {
 		return nil
 	}
+
 	return &iotago.ReceiptMilestoneOpt{
 		MigratedAt: migratedAt,
 		Final:      final,

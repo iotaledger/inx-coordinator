@@ -198,6 +198,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
+
 		return coordinatorDepsOut{
 			Coordinator:      coo,
 			TangleListener:   nodebridge.NewTangleListener(deps.NodeBridge),
@@ -206,6 +207,7 @@ func provide(c *dig.Container) error {
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -227,6 +229,7 @@ func configure() error {
 	nextMilestoneSignal = make(chan struct{}, 1)
 
 	configureEvents()
+
 	return nil
 }
 
@@ -238,17 +241,20 @@ func handleError(err error) bool {
 
 	if err := common.IsCriticalError(err); err != nil {
 		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err), true)
+
 		return true
 	}
 
 	if err := common.IsSoftError(err); err != nil {
 		CoreComponent.LogWarn(err)
 		deps.Coordinator.Events.SoftError.Trigger(err)
+
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
 	CoreComponent.LogPanicf("coordinator plugin hit an unknown error type: %s", err)
+
 	return true
 }
 
@@ -297,6 +303,7 @@ func run() error {
 		if handleError(err) {
 			// critical error => stop worker
 			detachEvents()
+
 			return
 		}
 
@@ -329,6 +336,7 @@ func run() error {
 						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 							CoreComponent.LogWarn(err)
 						}
+
 						return
 					}
 
@@ -337,6 +345,7 @@ func run() error {
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						CoreComponent.LogWarn(err)
+
 						return
 					}
 					lastCheckpointIndex++
@@ -349,6 +358,7 @@ func run() error {
 				// skip signal to prevent milestone issuance with same timestamp
 				if deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
 					CoreComponent.LogWarn("skipping milestone signal due to too fast ticker")
+
 					continue
 				}
 
@@ -416,6 +426,7 @@ func run() error {
 	}, daemon.PriorityStopCoordinator); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+
 	return nil
 }
 

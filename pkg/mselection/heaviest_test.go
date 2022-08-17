@@ -41,17 +41,20 @@ func randBytes(length int) []byte {
 	for i := 0; i < length; i++ {
 		b = append(b, byte(rand.Intn(256)))
 	}
+
 	return b
 }
 
 func randBlockID() iotago.BlockID {
 	blockID := iotago.BlockID{}
 	copy(blockID[:], randBytes(iotago.BlockIDLength))
+
 	return blockID
 }
 
 func newMetadata(parents iotago.BlockIDs) (*inx.BlockMetadata, iotago.BlockID) {
 	blockID := randBlockID()
+
 	return &inx.BlockMetadata{
 		BlockId: inx.NewBlockId(blockID),
 		Parents: inx.NewBlockIds(parents),

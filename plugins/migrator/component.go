@@ -67,6 +67,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			Plugin.LogPanicf("failed to initialize API: %s", err)
 		}
+
 		return validator.NewValidator(
 			legacyAPI,
 			ParamsReceipts.Validator.Coordinator.Address,
@@ -99,6 +100,7 @@ func provide(c *dig.Container) error {
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -112,6 +114,7 @@ func configure() error {
 	if err := deps.MigratorService.InitState(msIndex); err != nil {
 		Plugin.LogFatalfAndExit("failed to initialize migrator: %s", err)
 	}
+
 	return nil
 }
 
@@ -123,6 +126,7 @@ func run() error {
 
 			if err := common.IsCriticalError(err); err != nil {
 				deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("migrator plugin hit a critical error: %s", err), true)
+
 				return false
 			}
 
@@ -132,11 +136,13 @@ func run() error {
 
 			// lets just log the err and halt querying for a configured period
 			Plugin.LogWarn(err)
+
 			return timeutil.Sleep(ctx, ParamsMigrator.QueryCooldownPeriod)
 		})
 		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
 	}, daemon.PriorityStopMigrator); err != nil {
 		return err
 	}
+
 	return nil
 }
