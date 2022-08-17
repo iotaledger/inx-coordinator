@@ -160,6 +160,7 @@ func (q *quorum) checkMerkleTreeHashQuorumGroup(cooMerkleProof *MilestoneMerkleR
 		}(entry, nodeResultChan, nodeErrorChan)
 	}
 
+	//nolint:ifshort // false positive
 	validResults := 0
 QuorumLoop:
 	for i := 0; i < len(quorumGroupEntries); i++ {
