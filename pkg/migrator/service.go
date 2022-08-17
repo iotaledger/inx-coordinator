@@ -163,6 +163,7 @@ func (s *Service) InitState(msIndex *iotago.MilestoneIndex) error {
 	}
 
 	//TODO: read this from the latest milestone metadata (https://github.com/iotaledger/inx-coordinator/issues/2)
+	//nolint:gocritic // false positive
 	//if utxoManager != nil {
 	//	highestMigratedAtIndex, err := utxoManager.SearchHighestReceiptMigratedAtIndex()
 	//	if err != nil {
