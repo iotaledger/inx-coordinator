@@ -30,7 +30,7 @@ type QuorumClientConfig struct {
 	// baseURL of the quorum client.
 	BaseURL string `json:"baseUrl" koanf:"baseUrl"`
 	// optional username for basic auth.
-	UserName string `json:"userName" koanf:"userName"`
+	Username string `json:"username" koanf:"username"`
 	// optional password for basic auth.
 	Password string `json:"password" koanf:"password"`
 }
@@ -87,8 +87,8 @@ func newQuorum(quorumGroups map[string][]*QuorumClientConfig, timeout time.Durat
 		groups[groupName] = make([]*quorumGroupEntry, len(groupNodes))
 		for i, client := range groupNodes {
 			var userInfo *url.Userinfo
-			if client.UserName != "" || client.Password != "" {
-				userInfo = url.UserPassword(client.UserName, client.Password)
+			if client.Username != "" || client.Password != "" {
+				userInfo = url.UserPassword(client.Username, client.Password)
 			}
 
 			groups[groupName][i] = &quorumGroupEntry{
