@@ -103,7 +103,7 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 
 	// check if the current tips match the current count
 	list := hps.TipsToList()
-	assert.Len(t, list.Len(), count)
+	assert.Equal(t, list.Len(), count)
 
 	// issue a new block that references the old ones
 	metadata, blockID := newMetadata(blockIDs)
@@ -114,7 +114,7 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 
 	// all old tips should be removed, except the new one
 	list = hps.TipsToList()
-	assert.Len(t, list.Len(), 1)
+	assert.Equal(t, list.Len(), 1)
 
 	// select a tip
 	tips, err := hps.SelectTips(1)
@@ -128,7 +128,7 @@ func TestHeaviestSelector_CheckTipsRemoved(t *testing.T) {
 	assert.Equal(t, hps.TrackedBlocksCount(), 0)
 
 	list = hps.TipsToList()
-	assert.Len(t, list.Len(), 0)
+	assert.Equal(t, list.Len(), 0)
 }
 
 func TestHeaviestSelector_SelectTipsChains(t *testing.T) {
