@@ -3,6 +3,7 @@ package mselection
 import (
 	"container/list"
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -102,6 +103,7 @@ func New(minHeaviestBranchUnreferencedBlocksThreshold int, maxHeaviestBranchTips
 		heaviestBranchSelectionTimeout:               heaviestBranchSelectionTimeout,
 	}
 	s.Reset()
+
 	return s
 }
 
@@ -177,7 +179,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (iotago.BlockIDs, err
 	// and to get a frozen view of the tangle, so an attacker can't
 	// create heavier branches while we are searching the best tips
 	// caution: the tips are not copied, do not mutate!
-	tipsList := s.tipsToList()
+	tipsList := s.TipsToList()
 
 	// tips could be empty after a reset
 	if tipsList.Len() == 0 {
@@ -233,6 +235,7 @@ func (s *HeaviestSelector) SelectTips(minRequiredTips int) (iotago.BlockIDs, err
 	// reset the whole HeaviestSelector if valid tips were found
 	s.Reset()
 
+	//nolint:nilerr // false positive
 	return tips, nil
 }
 
@@ -292,16 +295,20 @@ func (s *HeaviestSelector) removeTip(it *trackedBlock) {
 	it.tip = nil
 }
 
-// tipsToList returns a new list containing the current tips.
-func (s *HeaviestSelector) tipsToList() *trackedBlocksList {
+// TipsToList returns a new list containing the current tips.
+func (s *HeaviestSelector) TipsToList() *trackedBlocksList {
 	s.Lock()
 	defer s.Unlock()
 
 	result := make(map[iotago.BlockID]*trackedBlock)
 	for e := s.tips.Front(); e != nil; e = e.Next() {
-		tip := e.Value.(*trackedBlock)
+		tip, ok := e.Value.(*trackedBlock)
+		if !ok {
+			panic(fmt.Sprintf("invalid type: expected **trackedBlock, got %T", e.Value))
+		}
 		result[tip.blockID] = tip
 	}
+
 	return &trackedBlocksList{blocks: result}
 }
 

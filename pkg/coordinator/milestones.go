@@ -88,11 +88,14 @@ func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.Mileston
 					coo.LogWarnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
 					time.Sleep(coo.opts.signingRetryTimeout)
 				}
+
 				continue
 			}
+
 			return sigs, nil
 		}
 		coo.LogWarnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
+
 		return
 	}
 }

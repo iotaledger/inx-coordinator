@@ -58,17 +58,20 @@ func (n *TreasuryListener) LatestTreasuryOutput() (*coordinator.LatestTreasuryOu
 
 func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel context.CancelFunc) error {
 	defer cancel()
+
 	stream, err := n.nodeBridge.Client().ListenToTreasuryUpdates(ctx, &inx.MilestoneRangeRequest{})
 	if err != nil {
 		return err
 	}
+
 	for {
 		update, err := stream.Recv()
 		if err != nil {
-			if err == io.EOF || status.Code(err) == codes.Canceled {
+			if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
 				break
 			}
 			n.LogErrorf("listenToTreasuryUpdates: %s", err.Error())
+
 			break
 		}
 		if ctx.Err() != nil {
@@ -76,12 +79,18 @@ func (n *TreasuryListener) listenToTreasuryUpdates(ctx context.Context, cancel c
 		}
 		n.processTreasuryUpdate(update)
 	}
+
+	//nolint:nilerr // false positive
 	return nil
 }
 
 func (n *TreasuryListener) Run(ctx context.Context) {
 	c, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go n.listenToTreasuryUpdates(c, cancel)
+	go func() {
+		if err := n.listenToTreasuryUpdates(c, cancel); err != nil {
+			n.LogErrorf("listenToTreasuryUpdates: %s", err.Error())
+		}
+	}()
 	<-c.Done()
 }

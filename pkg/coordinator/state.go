@@ -18,8 +18,8 @@ type State struct {
 // jsoncoostate is the JSON representation of a coordinator state.
 type jsoncoostate struct {
 	LatestMilestoneIndex   uint32 `json:"latestMilestoneIndex"`
-	LatestMilestoneBlockID string `json:"latestMilestoneBlockID"`
-	LatestMilestoneID      string `json:"latestMilestoneID"`
+	LatestMilestoneBlockID string `json:"latestMilestoneBlockId"`
+	LatestMilestoneID      string `json:"latestMilestoneId"`
 	LatestMilestoneTime    int64  `json:"latestMilestoneTime"`
 }
 

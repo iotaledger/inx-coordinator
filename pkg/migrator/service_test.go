@@ -2,7 +2,6 @@ package migrator_test
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -18,7 +17,7 @@ import (
 var stateFileName string
 
 func init() {
-	dir, err := ioutil.TempDir("", "migrator_test")
+	dir, err := os.MkdirTemp("", "migrator_test")
 	if err != nil {
 		log.Fatalf("failed to create temp dir: %s", err)
 	}
@@ -96,7 +95,7 @@ func TestRestoreState(t *testing.T) {
 	require.Subset(t, serviceTests.entries, receipt2.Funds)
 }
 
-func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int) (*migrator.MigratorService, func()) {
+func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int) (*migrator.Service, func()) {
 	s := migrator.NewService(&mockQueryer{}, stateFileName, maxEntries)
 
 	if msIndex > 0 {
@@ -117,6 +116,7 @@ func newTestService(t *testing.T, msIndex iotago.MilestoneIndex, maxEntries int)
 	}()
 
 	<-started
+
 	return s, func() {
 		ctxCancel()
 		// we don't need to check the error, maybe the file doesn't exist
@@ -130,6 +130,7 @@ func (mockQueryer) QueryMigratedFunds(msIndex iotago.MilestoneIndex) ([]*iotago.
 	if msIndex == serviceTests.migratedAt {
 		return serviceTests.entries, nil
 	}
+
 	return nil, nil
 }
 
@@ -137,6 +138,7 @@ func (mockQueryer) QueryNextMigratedFunds(startIndex iotago.MilestoneIndex) (iot
 	if startIndex <= serviceTests.migratedAt {
 		return serviceTests.migratedAt, serviceTests.entries, nil
 	}
+
 	return serviceTests.migratedAt, nil, nil
 }
 

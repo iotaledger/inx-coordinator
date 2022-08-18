@@ -28,6 +28,7 @@ func App() *app.App {
 		app.WithPlugins([]*app.Plugin{
 			migrator.Plugin,
 			profiling.Plugin,
+			//nolint:gocritic // false positive
 			//prometheus.Plugin,
 		}...),
 	)

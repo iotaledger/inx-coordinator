@@ -31,11 +31,11 @@ import (
 )
 
 const (
-	// CfgCoordinatorBootstrap defines whether to bootstrap the network
+	// CfgCoordinatorBootstrap defines whether to bootstrap the network.
 	CfgCoordinatorBootstrap = "cooBootstrap"
-	// CfgCoordinatorStartIndex defines the index of the first milestone at bootstrap
+	// CfgCoordinatorStartIndex defines the index of the first milestone at bootstrap.
 	CfgCoordinatorStartIndex = "cooStartIndex"
-	// MilestoneMaxAdditionalTipsLimit defines the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash)
+	// MilestoneMaxAdditionalTipsLimit defines the maximum limit of additional tips that fit into a milestone (besides the last milestone and checkpoint hash).
 	MilestoneMaxAdditionalTipsLimit = 6
 )
 
@@ -72,7 +72,7 @@ var (
 	lastCheckpointBlockID iotago.BlockID
 	lastMilestoneBlockID  iotago.BlockID
 
-	// closures
+	// closures.
 	onBlockSolid                *events.Closure
 	onConfirmedMilestoneChanged *events.Closure
 	onIssuedCheckpoint          *events.Closure
@@ -105,7 +105,7 @@ func provide(c *dig.Container) error {
 
 	type coordinatorDeps struct {
 		dig.In
-		MigratorService *migrator.MigratorService `optional:"true"`
+		MigratorService *migrator.Service `optional:"true"`
 		NodeBridge      *nodebridge.NodeBridge
 	}
 
@@ -127,7 +127,7 @@ func provide(c *dig.Container) error {
 
 			keyManager := keymanager.New()
 			for _, keyRange := range deps.NodeBridge.NodeConfig.GetMilestoneKeyRanges() {
-				keyManager.AddKeyRange(keyRange.GetPublicKey(), iotago.MilestoneIndex(keyRange.GetStartIndex()), iotago.MilestoneIndex(keyRange.GetEndIndex()))
+				keyManager.AddKeyRange(keyRange.GetPublicKey(), keyRange.GetStartIndex(), keyRange.GetEndIndex())
 			}
 
 			signingProvider, err := initSigningProvider(
@@ -137,7 +137,7 @@ func provide(c *dig.Container) error {
 				int(deps.NodeBridge.NodeConfig.GetMilestonePublicKeyCount()),
 			)
 			if err != nil {
-				return nil, fmt.Errorf("failed to initialize signing provider: %s", err)
+				return nil, fmt.Errorf("failed to initialize signing provider: %w", err)
 			}
 
 			if ParamsCoordinator.Quorum.Enabled {
@@ -198,6 +198,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogPanic(err)
 		}
+
 		return coordinatorDepsOut{
 			Coordinator:      coo,
 			TangleListener:   nodebridge.NewTangleListener(deps.NodeBridge),
@@ -206,6 +207,7 @@ func provide(c *dig.Container) error {
 	}); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -227,6 +229,7 @@ func configure() error {
 	nextMilestoneSignal = make(chan struct{}, 1)
 
 	configureEvents()
+
 	return nil
 }
 
@@ -238,17 +241,20 @@ func handleError(err error) bool {
 
 	if err := common.IsCriticalError(err); err != nil {
 		deps.ShutdownHandler.SelfShutdown(fmt.Sprintf("coordinator plugin hit a critical error: %s", err), true)
+
 		return true
 	}
 
 	if err := common.IsSoftError(err); err != nil {
 		CoreComponent.LogWarn(err)
 		deps.Coordinator.Events.SoftError.Trigger(err)
+
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
 	CoreComponent.LogPanicf("coordinator plugin hit an unknown error type: %s", err)
+
 	return true
 }
 
@@ -297,6 +303,7 @@ func run() error {
 		if handleError(err) {
 			// critical error => stop worker
 			detachEvents()
+
 			return
 		}
 
@@ -329,6 +336,7 @@ func run() error {
 						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
 							CoreComponent.LogWarn(err)
 						}
+
 						return
 					}
 
@@ -337,6 +345,7 @@ func run() error {
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						CoreComponent.LogWarn(err)
+
 						return
 					}
 					lastCheckpointIndex++
@@ -349,6 +358,7 @@ func run() error {
 				// skip signal to prevent milestone issuance with same timestamp
 				if deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
 					CoreComponent.LogWarn("skipping milestone signal due to too fast ticker")
+
 					continue
 				}
 
@@ -416,6 +426,7 @@ func run() error {
 	}, daemon.PriorityStopCoordinator); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+
 	return nil
 }
 
@@ -431,14 +442,15 @@ func loadEd25519PrivateKeysFromEnvironment(name string) ([]ed25519.PrivateKey, e
 		return nil, fmt.Errorf("environment variable '%s' not set", name)
 	}
 
-	var privateKeys []ed25519.PrivateKey
-	for _, key := range strings.Split(keys, ",") {
+	privateKeysSplitted := strings.Split(keys, ",")
+	privateKeys := make([]ed25519.PrivateKey, len(privateKeysSplitted))
+	for i, key := range privateKeysSplitted {
 		privateKey, err := crypto.ParseEd25519PrivateKeyFromString(key)
 		if err != nil {
 			return nil, fmt.Errorf("environment variable '%s' contains an invalid private key '%s'", name, key)
 
 		}
-		privateKeys = append(privateKeys, privateKey)
+		privateKeys[i] = privateKey
 	}
 
 	return privateKeys, nil

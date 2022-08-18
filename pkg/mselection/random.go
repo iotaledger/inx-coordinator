@@ -8,6 +8,7 @@ import (
 )
 
 var (
+	//nolint:gosec // we do not care about weak random numbers here
 	seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
 	randLock   = &syncutils.Mutex{}
 )
@@ -19,5 +20,6 @@ func randomInsecure(min int, max int) int {
 	// Rand needs to be locked: https://github.com/golang/go/issues/3611
 	randLock.Lock()
 	defer randLock.Unlock()
+
 	return seededRand.Intn(max+1-min) + min
 }

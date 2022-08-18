@@ -17,7 +17,7 @@ import (
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
 
-	// import implementation
+	// import implementation.
 	_ "golang.org/x/crypto/blake2b"
 )
 
@@ -35,13 +35,13 @@ type LatestMilestoneInfo struct {
 	MilestoneID iotago.MilestoneID
 }
 
-// LatestTreasuryOutput represents the latest treasury output created by the last milestone that contained a migration
+// LatestTreasuryOutput represents the latest treasury output created by the last milestone that contained a migration.
 type LatestTreasuryOutput struct {
 	MilestoneID iotago.MilestoneID
 	Amount      uint64
 }
 
-// UnspentTreasuryOutputFunc should return the latest unspent LatestTreasuryOutput
+// UnspentTreasuryOutputFunc should return the latest unspent LatestTreasuryOutput.
 type UnspentTreasuryOutputFunc = func() (*LatestTreasuryOutput, error)
 
 var (
@@ -49,7 +49,7 @@ var (
 	ErrNoTipsGiven = errors.New("no tips given")
 	// ErrNetworkBootstrapped is returned when the flag for bootstrap network was given, but a state file already exists.
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
-	// ErrNodeLoadTooHigh is returned if the backpressure func says the node load is too high
+	// ErrNodeLoadTooHigh is returned if the backpressure func says the node load is too high.
 	ErrNodeLoadTooHigh = errors.New("node load too high")
 )
 
@@ -94,7 +94,7 @@ type Coordinator struct {
 	// Used to determine the current protocol parameters including byte costs.
 	protoParamsFunc ProtocolParameteresFunc
 	// used to get receipts for the WOTS migration.
-	migratorService *migrator.MigratorService
+	migratorService *migrator.Service
 	// used to get the treasury output.
 	treasuryOutputFunc UnspentTreasuryOutputFunc
 	// used to sign the milestones.
@@ -195,6 +195,7 @@ func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfi
 	return func(opts *Options) {
 		if !quorumEnabled {
 			opts.quorum = nil
+
 			return
 		}
 		opts.quorum = newQuorum(quorumGroups, timeout)
@@ -210,7 +211,7 @@ func New(
 	nodeSyncedFunc IsNodeSyncedFunc,
 	protoParamsFunc ProtocolParameteresFunc,
 	signerProvider MilestoneSignerProvider,
-	migratorService *migrator.MigratorService,
+	migratorService *migrator.Service,
 	treasuryOutputFunc UnspentTreasuryOutputFunc,
 	sendBlockFunc SendBlockFunc,
 	opts ...Option) (*Coordinator, error) {
@@ -308,6 +309,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneInd
 	coo.LogInfof("resuming coordinator at %d", latestMilestone.Index)
 
 	coo.bootstrapped = true
+
 	return nil
 }
 
@@ -342,6 +344,7 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 		if err != nil {
 			// quorum failed => non-critical or critical error
 			coo.LogInfof("coordinator quorum failed after %v, err: %s", time.Since(ts).Truncate(time.Millisecond), err)
+
 			return err
 		}
 
@@ -541,6 +544,7 @@ func (coo *Coordinator) checkBackPressureFunctions() bool {
 			return true
 		}
 	}
+
 	return false
 }
 
