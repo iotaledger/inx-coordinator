@@ -1,5 +1,5 @@
 ---
-description: INX-Coordinator is the extension tasked with coordinating the grow of the tangle.
+description: INX-Coordinator is the extension tasked with coordinating the growth of the tangle.
 image: /img/Banner/banner_hornet.png
 keywords:
 - IOTA Node
@@ -15,19 +15,18 @@ keywords:
 
 # Welcome to INX-Coordinator
 
-INX-Coordinator is the extension tasked with coordinating the constant grow of the tangle.
-It's task is to issue milestones at a constant rate. Validation of the issued milestones is done by the nodes.
+In the current implementation, the Tangle is secured by the [Coordinator](https://wiki.iota.org/learn/about-iota/coordinator) node. It issues special blocks: *milestones*. The rest of the network considers new blocks valid only if they reference a milestone.
 
 ## Setup
 
-There is only one coordinator needed in a network. If you want to run your own private network with it's own coordinator, have a look at our [Run a Private Tangle](https://wiki.iota.org/hornet/develop/how_tos/private_tangle) guide.
+You need only one Coordinator to secure a network, so you want to install this extension only when you are going to run your own private network. See [Run a Private Tangle](https://wiki.iota.org/hornet/develop/how_tos/private_tangle) for details.
 
 
 ## Configuration
 
-The coordinator is configured by default to connect to your HORNET instance.
+The coordinator connects to the local Hornet instance by default.
 
-You can find all the configuration options in the [configuration section](configuration.md).
+You can find all the configuration options in [Configuration](configuration.md).
 
 
 ## Source Code
