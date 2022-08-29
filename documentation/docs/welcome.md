@@ -19,7 +19,7 @@ In the current implementation, the Tangle is secured by the [Coordinator](https:
 
 ## Setup
 
-You need only one Coordinator to secure a network, so you want to install this extension only when you are going to run your own private network. See [Run a Private Tangle](https://wiki.iota.org/hornet/develop/how_tos/private_tangle) for details.
+A network needs only one Coordinator to be secure. Since the Tangle already has its Coordinator, you need to install this extension only when you are going to run your own private network. See [Run a Private Tangle](https://wiki.iota.org/hornet/develop/how_tos/private_tangle) for details.
 
 
 ## Configuration
