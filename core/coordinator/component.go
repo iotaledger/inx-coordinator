@@ -299,6 +299,7 @@ func run() error {
 		attachEvents()
 
 		// bootstrap the network if not done yet
+		//nolint:contextcheck // false positive
 		milestoneBlockID, err := deps.Coordinator.Bootstrap()
 		if handleError(err) {
 			// critical error => stop worker
@@ -391,6 +392,7 @@ func run() error {
 
 				milestoneTips = append(milestoneTips, iotago.BlockIDs{lastMilestoneBlockID, lastCheckpointBlockID}...)
 
+				//nolint:contextcheck // false positive
 				milestoneBlockID, err := deps.Coordinator.IssueMilestone(milestoneTips)
 				if handleError(err) {
 					// critical error => quit loop
@@ -510,7 +512,7 @@ func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.Bl
 		return iotago.EmptyBlockID(), err
 	}
 
-	blockSolidEventChan := deps.TangleListener.RegisterBlockSolidEvent(blockID)
+	blockSolidEventChan := deps.TangleListener.RegisterBlockSolidEvent(context.Background(), blockID)
 
 	defer func() {
 		if err != nil {
