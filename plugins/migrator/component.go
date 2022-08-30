@@ -65,7 +65,7 @@ func provide(c *dig.Container) error {
 			Client: &http.Client{Timeout: ParamsReceipts.Validator.API.Timeout},
 		})
 		if err != nil {
-			Plugin.LogPanicf("failed to initialize API: %s", err)
+			Plugin.LogErrorAndExit("failed to initialize API: %s", err)
 		}
 
 		return validator.NewValidator(
@@ -87,9 +87,9 @@ func provide(c *dig.Container) error {
 		maxReceiptEntries := ParamsMigrator.ReceiptMaxEntries
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			Plugin.LogPanicf("%s (set to %d) can be max %d", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
+			Plugin.LogErrorAndExit("%s (set to %d) can be max %d", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			Plugin.LogPanicf("%s must be greather than 0", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
+			Plugin.LogErrorAndExit("%s must be greather than 0", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
 		}
 
 		return migrator.NewService(

@@ -196,7 +196,7 @@ func provide(c *dig.Container) error {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			CoreComponent.LogErrorAndExit(err)
 		}
 
 		return coordinatorDepsOut{
@@ -215,11 +215,11 @@ func configure() error {
 
 	databasesTainted, err := todo.AreDatabasesTainted()
 	if err != nil {
-		CoreComponent.LogPanic(err)
+		CoreComponent.LogErrorAndExit(err)
 	}
 
 	if databasesTainted {
-		CoreComponent.LogPanic(ErrDatabaseTainted)
+		CoreComponent.LogErrorAndExit(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})
@@ -253,7 +253,7 @@ func handleError(err error) bool {
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	CoreComponent.LogPanicf("coordinator plugin hit an unknown error type: %s", err)
+	CoreComponent.LogErrorAndExit("coordinator plugin hit an unknown error type: %s", err)
 
 	return true
 }
