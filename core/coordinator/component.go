@@ -253,7 +253,7 @@ func handleError(err error) bool {
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	CoreComponent.LogErrorAndExit("coordinator plugin hit an unknown error type: %s", err)
+	CoreComponent.LogErrorfAndExit("coordinator plugin hit an unknown error type: %s", err)
 
 	return true
 }
