@@ -196,7 +196,7 @@ func provide(c *dig.Container) error {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			CoreComponent.LogPanic(err)
+			CoreComponent.LogErrorAndExit(err)
 		}
 
 		return coordinatorDepsOut{
@@ -215,11 +215,11 @@ func configure() error {
 
 	databasesTainted, err := todo.AreDatabasesTainted()
 	if err != nil {
-		CoreComponent.LogPanic(err)
+		CoreComponent.LogErrorAndExit(err)
 	}
 
 	if databasesTainted {
-		CoreComponent.LogPanic(ErrDatabaseTainted)
+		CoreComponent.LogErrorAndExit(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})
@@ -253,7 +253,7 @@ func handleError(err error) bool {
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	CoreComponent.LogPanicf("coordinator plugin hit an unknown error type: %s", err)
+	CoreComponent.LogErrorfAndExit("coordinator plugin hit an unknown error type: %s", err)
 
 	return true
 }
@@ -299,6 +299,7 @@ func run() error {
 		attachEvents()
 
 		// bootstrap the network if not done yet
+		//nolint:contextcheck // false positive
 		milestoneBlockID, err := deps.Coordinator.Bootstrap()
 		if handleError(err) {
 			// critical error => stop worker
@@ -391,6 +392,7 @@ func run() error {
 
 				milestoneTips = append(milestoneTips, iotago.BlockIDs{lastMilestoneBlockID, lastCheckpointBlockID}...)
 
+				//nolint:contextcheck // false positive
 				milestoneBlockID, err := deps.Coordinator.IssueMilestone(milestoneTips)
 				if handleError(err) {
 					// critical error => quit loop
@@ -510,7 +512,7 @@ func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.Bl
 		return iotago.EmptyBlockID(), err
 	}
 
-	blockSolidEventChan := deps.TangleListener.RegisterBlockSolidEvent(blockID)
+	blockSolidEventChan := deps.TangleListener.RegisterBlockSolidEvent(context.Background(), blockID)
 
 	defer func() {
 		if err != nil {

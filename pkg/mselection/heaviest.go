@@ -46,17 +46,17 @@ type trackedBlock struct {
 	refs    *bitset.BitSet // BitSet of all the referenced blocks
 }
 
-type trackedBlocksList struct {
+type TrackedBlocksList struct {
 	blocks map[iotago.BlockID]*trackedBlock
 }
 
 // Len returns the length of the inner blocks slice.
-func (il *trackedBlocksList) Len() int {
+func (il *TrackedBlocksList) Len() int {
 	return len(il.blocks)
 }
 
 // randomTip selects a random tip item from the trackedBlocksList.
-func (il *trackedBlocksList) randomTip() (*trackedBlock, error) {
+func (il *TrackedBlocksList) randomTip() (*trackedBlock, error) {
 	if len(il.blocks) == 0 {
 		return nil, ErrNoTipsAvailable
 	}
@@ -79,7 +79,7 @@ func (il *trackedBlocksList) randomTip() (*trackedBlock, error) {
 // blocks of the tip in all existing tips to zero.
 // this way we can track which parts of the cone would already be referenced by this tip, and
 // correctly calculate the weight of the remaining tips.
-func (il *trackedBlocksList) referenceTip(tip *trackedBlock) {
+func (il *TrackedBlocksList) referenceTip(tip *trackedBlock) {
 
 	il.removeTip(tip)
 
@@ -90,7 +90,7 @@ func (il *trackedBlocksList) referenceTip(tip *trackedBlock) {
 }
 
 // removeTip removes the tip from the map.
-func (il *trackedBlocksList) removeTip(tip *trackedBlock) {
+func (il *TrackedBlocksList) removeTip(tip *trackedBlock) {
 	delete(il.blocks, tip.blockID)
 }
 
@@ -122,7 +122,7 @@ func (s *HeaviestSelector) Reset() {
 // selectTip selects a tip to be used for the next checkpoint.
 // it returns a tip, confirming the most blocks in the future cone,
 // and the amount of referenced blocks of this tip, that were not referenced by previously chosen tips.
-func (s *HeaviestSelector) selectTip(tipsList *trackedBlocksList) (*trackedBlock, uint, error) {
+func (s *HeaviestSelector) selectTip(tipsList *TrackedBlocksList) (*trackedBlock, uint, error) {
 
 	if tipsList.Len() == 0 {
 		return nil, 0, ErrNoTipsAvailable
@@ -296,7 +296,7 @@ func (s *HeaviestSelector) removeTip(it *trackedBlock) {
 }
 
 // TipsToList returns a new list containing the current tips.
-func (s *HeaviestSelector) TipsToList() *trackedBlocksList {
+func (s *HeaviestSelector) TipsToList() *TrackedBlocksList {
 	s.Lock()
 	defer s.Unlock()
 
@@ -309,7 +309,7 @@ func (s *HeaviestSelector) TipsToList() *trackedBlocksList {
 		result[tip.blockID] = tip
 	}
 
-	return &trackedBlocksList{blocks: result}
+	return &TrackedBlocksList{blocks: result}
 }
 
 // TrackedBlocksCount returns the amount of known blocks.
