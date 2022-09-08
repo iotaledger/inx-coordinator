@@ -543,6 +543,13 @@ func configureEvents() {
 	// pass all new solid blocks to the selector
 	onBlockSolid = events.NewClosure(func(metadata *inx.BlockMetadata) {
 
+		if !deps.NodeBridge.IsNodeSynced() {
+			// ignore tips if the node is not synced,
+			// otherwise we may add blocks that seem to be fine,
+			// but are below max depth in reality
+			return
+		}
+
 		if metadata.GetShouldReattach() {
 			// ignore tips that are below max depth
 			return
