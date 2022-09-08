@@ -74,7 +74,9 @@ var (
 
 	// closures.
 	onBlockSolid                *events.Closure
+	onLatestMilestoneChanged    *events.Closure
 	onConfirmedMilestoneChanged *events.Closure
+	onMilestoneTimeout          *events.Closure
 	onIssuedCheckpoint          *events.Closure
 	onIssuedMilestone           *events.Closure
 )
@@ -159,6 +161,7 @@ func provide(c *dig.Container) error {
 				coordinator.WithLogger(CoreComponent.Logger()),
 				coordinator.WithStateFilePath(ParamsCoordinator.StateFilePath),
 				coordinator.WithMilestoneInterval(ParamsCoordinator.Interval),
+				coordinator.WithMilestoneTimeout(ParamsCoordinator.MilestoneTimeout),
 				coordinator.WithQuorum(ParamsCoordinator.Quorum.Enabled, ParamsCoordinator.Quorum.Groups, ParamsCoordinator.Quorum.Timeout),
 				coordinator.WithSigningRetryAmount(ParamsCoordinator.Signing.RetryAmount),
 				coordinator.WithSigningRetryTimeout(ParamsCoordinator.Signing.RetryTimeout),
@@ -424,6 +427,7 @@ func run() error {
 			}
 		}
 
+		deps.Coordinator.StopMilestoneTimeoutTicker()
 		detachEvents()
 	}, daemon.PriorityStopCoordinator); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
@@ -557,6 +561,14 @@ func configureEvents() {
 		}
 	})
 
+	onLatestMilestoneChanged = events.NewClosure(func(_ *nodebridge.Milestone) {
+		// reset the milestone timeout ticker
+		deps.Coordinator.ResetMilestoneTimeoutTicker()
+
+		// re-enable the tipselector in case it was disabled
+		deps.Selector.Continue()
+	})
+
 	onConfirmedMilestoneChanged = events.NewClosure(func(_ *nodebridge.Milestone) {
 		heaviestSelectorLock.Lock()
 		defer heaviestSelectorLock.Unlock()
@@ -572,6 +584,10 @@ func configureEvents() {
 		lastCheckpointIndex = 0
 	})
 
+	onMilestoneTimeout = events.NewClosure(func() {
+		deps.Selector.Stop()
+	})
+
 	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, blockID iotago.BlockID) {
 		CoreComponent.LogInfof("checkpoint (%d) block issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, blockID.ToHex())
 	})
@@ -583,14 +599,18 @@ func configureEvents() {
 
 func attachEvents() {
 	deps.TangleListener.Events.BlockSolid.Hook(onBlockSolid)
+	deps.NodeBridge.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
 	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
 	deps.Coordinator.Events.IssuedCheckpointBlock.Hook(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Hook(onIssuedMilestone)
+	deps.Coordinator.Events.MilestoneTimeout.Hook(onMilestoneTimeout)
 }
 
 func detachEvents() {
 	deps.TangleListener.Events.BlockSolid.Detach(onBlockSolid)
+	deps.NodeBridge.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
 	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
 	deps.Coordinator.Events.IssuedCheckpointBlock.Detach(onIssuedCheckpoint)
 	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
+	deps.Coordinator.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
 }

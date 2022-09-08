@@ -38,6 +38,8 @@ type HeaviestSelector struct {
 	trackedBlocks map[iotago.BlockID]*trackedBlock
 	// list of available tips
 	tips *list.List
+	// whether new blocks should be accepted (used to protect against memory overflows in case the issuing of milestones is halted)
+	acceptNewBlocks bool
 }
 
 type trackedBlock struct {
@@ -101,10 +103,25 @@ func New(minHeaviestBranchUnreferencedBlocksThreshold int, maxHeaviestBranchTips
 		maxHeaviestBranchTipsPerCheckpoint:           maxHeaviestBranchTipsPerCheckpoint,
 		randomTipsPerCheckpoint:                      randomTipsPerCheckpoint,
 		heaviestBranchSelectionTimeout:               heaviestBranchSelectionTimeout,
+		acceptNewBlocks:                              true,
 	}
 	s.Reset()
 
 	return s
+}
+
+func (s *HeaviestSelector) Stop() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.acceptNewBlocks = false
+}
+
+func (s *HeaviestSelector) Continue() {
+	s.Lock()
+	defer s.Unlock()
+
+	s.acceptNewBlocks = true
 }
 
 // Reset resets the tracked blocks map and tips list of s.
@@ -246,6 +263,10 @@ func (s *HeaviestSelector) OnNewSolidBlock(blockMeta *inx.BlockMetadata) (tracke
 	s.Lock()
 	defer s.Unlock()
 
+	if !s.acceptNewBlocks {
+		return s.TrackedBlocksCount()
+	}
+
 	blockID := blockMeta.UnwrapBlockID()
 	parents := blockMeta.UnwrapParents()
 
@@ -304,7 +325,7 @@ func (s *HeaviestSelector) TipsToList() *TrackedBlocksList {
 	for e := s.tips.Front(); e != nil; e = e.Next() {
 		tip, ok := e.Value.(*trackedBlock)
 		if !ok {
-			panic(fmt.Sprintf("invalid type: expected **trackedBlock, got %T", e.Value))
+			panic(fmt.Sprintf("invalid type: expected *trackedBlock, got %T", e.Value))
 		}
 		result[tip.blockID] = tip
 	}
