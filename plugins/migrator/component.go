@@ -9,7 +9,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	validator "github.com/iotaledger/hornet/v2/pkg/model/migrator"
@@ -87,9 +87,9 @@ func provide(c *dig.Container) error {
 		maxReceiptEntries := ParamsMigrator.ReceiptMaxEntries
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			Plugin.LogErrorfAndExit("%s (set to %d) can be max %d", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
+			Plugin.LogErrorfAndExit("%s (set to %d) can be max %d", Plugin.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			Plugin.LogErrorfAndExit("%s must be greather than 0", Plugin.App.Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
+			Plugin.LogErrorfAndExit("%s must be greather than 0", Plugin.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
 		}
 
 		return migrator.NewService(
@@ -120,7 +120,7 @@ func configure() error {
 
 func run() error {
 
-	if err := Plugin.App.Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
+	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
 		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
 		deps.MigratorService.Start(ctx, func(err error) bool {
 

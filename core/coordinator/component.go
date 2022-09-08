@@ -13,7 +13,7 @@ import (
 	"go.uber.org/dig"
 
 	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/core/shutdown"
+	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
 	"github.com/iotaledger/hive.go/core/crypto"
 	"github.com/iotaledger/hive.go/core/events"
 	"github.com/iotaledger/hive.go/core/syncutils"
@@ -542,6 +542,13 @@ func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.Bl
 func configureEvents() {
 	// pass all new solid blocks to the selector
 	onBlockSolid = events.NewClosure(func(metadata *inx.BlockMetadata) {
+
+		if !deps.NodeBridge.IsNodeSynced() {
+			// ignore tips if the node is not synced,
+			// otherwise we may add blocks that seem to be fine,
+			// but are below max depth in reality
+			return
+		}
 
 		if metadata.GetShouldReattach() {
 			// ignore tips that are below max depth
