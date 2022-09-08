@@ -14,9 +14,10 @@ type Quorum struct {
 }
 
 type ParametersCoordinator struct {
-	StateFilePath string        `default:"coordinator.state" usage:"the path to the state file of the coordinator"`
-	Interval      time.Duration `default:"5s" usage:"the interval milestones are issued"`
-	Signing       struct {
+	StateFilePath    string        `default:"coordinator.state" usage:"the path to the state file of the coordinator"`
+	Interval         time.Duration `default:"5s" usage:"the interval milestones are issued"`
+	MilestoneTimeout time.Duration `default:"30s" usage:"the duration after which an event is triggered if no new milestones are received"`
+	Signing          struct {
 		Provider      string        `default:"local" usage:"the signing provider the coordinator uses to sign a milestone (local/remote)"`
 		RemoteAddress string        `default:"localhost:12345" usage:"the address of the remote signing provider (insecure connection!)"`
 		RetryTimeout  time.Duration `default:"2s" usage:"defines the timeout between signing retries"`

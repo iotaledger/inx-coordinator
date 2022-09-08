@@ -13,6 +13,7 @@ import (
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -63,6 +64,8 @@ type Events struct {
 	SoftError *events.Event
 	// QuorumFinished is triggered after a coordinator quorum call was finished.
 	QuorumFinished *events.Event
+	// MilestoneTimeout is triggered if no new milestones are received for some time.
+	MilestoneTimeout *events.Event
 }
 
 // IsNodeSyncedFunc should only return true if the node connected to the coordinator is synced.
@@ -101,6 +104,8 @@ type Coordinator struct {
 	signerProvider MilestoneSignerProvider
 	// the function used to send a block.
 	sendBlockFunc SendBlockFunc
+	// used to trigger an event if no new milestones are received for some time.
+	milestoneTimeoutTicker *timeutil.Ticker
 	// holds the coordinator options.
 	opts *Options
 
@@ -117,6 +122,7 @@ type Coordinator struct {
 const (
 	defaultStateFilePath     = "coordinator.state"
 	defaultMilestoneInterval = time.Duration(10) * time.Second
+	defaultMilestoneTimeout  = time.Duration(30) * time.Second
 )
 
 var (
@@ -127,6 +133,7 @@ var (
 var defaultOptions = []Option{
 	WithStateFilePath(defaultStateFilePath),
 	WithMilestoneInterval(defaultMilestoneInterval),
+	WithMilestoneTimeout(defaultMilestoneTimeout),
 	WithSigningRetryAmount(10),
 	WithSigningRetryTimeout(2 * time.Second),
 }
@@ -139,6 +146,8 @@ type Options struct {
 	stateFilePath string
 	// the interval milestones are issued.
 	milestoneInterval time.Duration
+	// the duration after which an event is triggered if no new milestones are received.
+	milestoneTimeout time.Duration
 	// the timeout between signing retries.
 	signingRetryTimeout time.Duration
 	// the amount of times to retry signing before bailing and shutting down the Coordinator.
@@ -172,6 +181,13 @@ func WithStateFilePath(stateFilePath string) Option {
 func WithMilestoneInterval(milestoneInterval time.Duration) Option {
 	return func(opts *Options) {
 		opts.milestoneInterval = milestoneInterval
+	}
+}
+
+// WithMilestoneTimeout defines the duration after which an event is triggered if no new milestones are received.
+func WithMilestoneTimeout(milestoneTimeout time.Duration) Option {
+	return func(opts *Options) {
+		opts.milestoneTimeout = milestoneTimeout
 	}
 }
 
@@ -225,20 +241,22 @@ func New(
 	}
 
 	result := &Coordinator{
-		merkleRootFunc:     merkleRootFunc,
-		isNodeSynced:       nodeSyncedFunc,
-		protoParamsFunc:    protoParamsFunc,
-		signerProvider:     signerProvider,
-		migratorService:    migratorService,
-		treasuryOutputFunc: treasuryOutputFunc,
-		sendBlockFunc:      sendBlockFunc,
-		opts:               options,
+		merkleRootFunc:         merkleRootFunc,
+		isNodeSynced:           nodeSyncedFunc,
+		protoParamsFunc:        protoParamsFunc,
+		signerProvider:         signerProvider,
+		migratorService:        migratorService,
+		treasuryOutputFunc:     treasuryOutputFunc,
+		sendBlockFunc:          sendBlockFunc,
+		opts:                   options,
+		milestoneTimeoutTicker: nil,
 
 		Events: &Events{
 			IssuedCheckpointBlock: events.NewEvent(CheckpointCaller),
 			IssuedMilestone:       events.NewEvent(MilestoneCaller),
 			SoftError:             events.NewEvent(events.ErrorCaller),
 			QuorumFinished:        events.NewEvent(QuorumFinishedCaller),
+			MilestoneTimeout:      events.NewEvent(events.VoidCaller),
 		},
 	}
 	result.WrappedLogger = logger.NewWrappedLogger(options.logger)
@@ -555,4 +573,24 @@ func (coo *Coordinator) QuorumStats() []QuorumClientStatistic {
 	}
 
 	return coo.opts.quorum.quorumStatsSnapshot()
+}
+
+// ResetMilestoneTimeoutTicker stops a running milestone timeout ticker and starts a new one.
+// MilestoneTimeout event is fired periodically if ResetMilestoneTimeoutTicker is not called within milestoneTimeout.
+func (coo *Coordinator) ResetMilestoneTimeoutTicker() {
+	if coo.milestoneTimeoutTicker != nil {
+		coo.milestoneTimeoutTicker.Shutdown()
+		coo.milestoneTimeoutTicker.WaitForGracefulShutdown()
+	}
+
+	coo.milestoneTimeoutTicker = timeutil.NewTicker(func() {
+		coo.Events.MilestoneTimeout.Trigger()
+	}, coo.opts.milestoneTimeout)
+}
+
+// StopMilestoneTimeoutTicker stops the milestone timeout ticker.
+func (coo *Coordinator) StopMilestoneTimeoutTicker() {
+	if coo.milestoneTimeoutTicker != nil {
+		coo.milestoneTimeoutTicker.Shutdown()
+	}
 }
