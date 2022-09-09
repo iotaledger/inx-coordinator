@@ -520,10 +520,9 @@ func (coo *Coordinator) IssueMilestone(parents iotago.BlockIDs) (iotago.BlockID,
 	coo.milestoneLock.Lock()
 	defer coo.milestoneLock.Unlock()
 
-	if !coo.isNodeSynced() {
-		// return a non-critical error to not kill the database
-		return iotago.EmptyBlockID(), common.SoftError(common.ErrNodeNotSynced)
-	}
+	// we don't need to check if the node is synced,
+	// because the node takes care if the milestone index is the next one
+	// during whiteflag.
 
 	// check whether we should hold issuing miletones
 	// if the node is currently under a lot of load
