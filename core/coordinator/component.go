@@ -165,6 +165,7 @@ func provide(c *dig.Container) error {
 				coordinator.WithQuorum(ParamsCoordinator.Quorum.Enabled, ParamsCoordinator.Quorum.Groups, ParamsCoordinator.Quorum.Timeout),
 				coordinator.WithSigningRetryAmount(ParamsCoordinator.Signing.RetryAmount),
 				coordinator.WithSigningRetryTimeout(ParamsCoordinator.Signing.RetryTimeout),
+				coordinator.WithBlockBackups(ParamsCoordinator.BlockBackups.Enabled, ParamsCoordinator.BlockBackups.FolderPath),
 			)
 			if err != nil {
 				return nil, err

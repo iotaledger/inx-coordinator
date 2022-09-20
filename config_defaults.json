@@ -47,6 +47,10 @@
       "maxHeaviestBranchTipsPerCheckpoint": 10,
       "randomTipsPerCheckpoint": 3,
       "heaviestBranchSelectionTimeout": "100ms"
+    },
+    "blockBackups": {
+      "enabled": true,
+      "folderPath": "block_backups"
     }
   },
   "migrator": {
