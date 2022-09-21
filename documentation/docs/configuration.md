@@ -119,15 +119,16 @@ Example:
 
 ## <a id="coordinator"></a> 4. Coordinator
 
-| Name                                    | Description                                                                      | Type   | Default value       |
-| --------------------------------------- | -------------------------------------------------------------------------------- | ------ | ------------------- |
-| stateFilePath                           | The path to the state file of the coordinator                                    | string | "coordinator.state" |
-| interval                                | The interval milestones are issued                                               | string | "5s"                |
-| milestoneTimeout                        | The duration after which an event is triggered if no new milestones are received | string | "30s"               |
-| [signing](#coordinator_signing)         | Configuration for signing                                                        | object |                     |
-| [quorum](#coordinator_quorum)           | Configuration for quorum                                                         | object |                     |
-| [checkpoints](#coordinator_checkpoints) | Configuration for checkpoints                                                    | object |                     |
-| [tipsel](#coordinator_tipsel)           | Configuration for Tipselection                                                   | object |                     |
+| Name                                      | Description                                                                      | Type   | Default value       |
+| ----------------------------------------- | -------------------------------------------------------------------------------- | ------ | ------------------- |
+| stateFilePath                             | The path to the state file of the coordinator                                    | string | "coordinator.state" |
+| interval                                  | The interval milestones are issued                                               | string | "5s"                |
+| milestoneTimeout                          | The duration after which an event is triggered if no new milestones are received | string | "30s"               |
+| [signing](#coordinator_signing)           | Configuration for signing                                                        | object |                     |
+| [quorum](#coordinator_quorum)             | Configuration for quorum                                                         | object |                     |
+| [checkpoints](#coordinator_checkpoints)   | Configuration for checkpoints                                                    | object |                     |
+| [tipsel](#coordinator_tipsel)             | Configuration for Tipselection                                                   | object |                     |
+| [blockBackups](#coordinator_blockbackups) | Configuration for blockBackups                                                   | object |                     |
 
 ### <a id="coordinator_signing"></a> Signing
 
@@ -161,6 +162,13 @@ Example:
 | randomTipsPerCheckpoint                      | Amount of checkpoint blocks with random tips that are picked if a checkpoint is issued and at least one heaviest branch tip was found, otherwise no random tips will be picked | int    | 3             |
 | heaviestBranchSelectionTimeout               | The maximum duration to select the heaviest branch tips                                                                                                                        | string | "100ms"       |
 
+### <a id="coordinator_blockbackups"></a> BlockBackups
+
+| Name       | Description                                                                                                          | Type    | Default value   |
+| ---------- | -------------------------------------------------------------------------------------------------------------------- | ------- | --------------- |
+| enabled    | Whether all blocks that are issued by the coordinator should be stored to disk before being submitted to the network | boolean | true            |
+| folderPath | The path to the folder where block backups are stored                                                                | string  | "block_backups" |
+
 Example:
 
 ```json
@@ -188,6 +196,10 @@ Example:
         "maxHeaviestBranchTipsPerCheckpoint": 10,
         "randomTipsPerCheckpoint": 3,
         "heaviestBranchSelectionTimeout": "100ms"
+      },
+      "blockBackups": {
+        "enabled": true,
+        "folderPath": "block_backups"
       }
     }
   }

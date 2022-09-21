@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"path"
 	"time"
 
 	"github.com/pkg/errors"
@@ -14,6 +15,7 @@ import (
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -136,6 +138,7 @@ var defaultOptions = []Option{
 	WithMilestoneTimeout(defaultMilestoneTimeout),
 	WithSigningRetryAmount(10),
 	WithSigningRetryTimeout(2 * time.Second),
+	WithBlockBackups(true, "block_backups"),
 }
 
 // Options define options for the Coordinator.
@@ -154,6 +157,10 @@ type Options struct {
 	signingRetryAmount int
 	// the optional quorum used by the coordinator to check for correct ledger state calculation.
 	quorum *quorum
+	// whether all blocks that are issued by the coordinator should be stored to disk before being submitted to the network.
+	blockBackupsEnabled bool
+	// the path to the folder where block backups are stored.
+	blockBackupsFolderPath string
 }
 
 // applies the given Option.
@@ -218,6 +225,15 @@ func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfi
 	}
 }
 
+// WithBlockBackups defines whether all blocks that are issued by the coordinator
+// should be stored to disk before being submitted to the network.
+func WithBlockBackups(blockBackupsEnabled bool, blockBackupsFolderPath string) Option {
+	return func(opts *Options) {
+		opts.blockBackupsEnabled = blockBackupsEnabled
+		opts.blockBackupsFolderPath = blockBackupsFolderPath
+	}
+}
+
 // Option is a function setting a coordinator option.
 type Option func(opts *Options)
 
@@ -261,7 +277,69 @@ func New(
 	}
 	result.WrappedLogger = logger.NewWrappedLogger(options.logger)
 
+	if err := result.checkBlockBackupsFolder(); err != nil {
+		return nil, common.CriticalError(err)
+	}
+
 	return result, nil
+}
+
+// checkBlockBackupsFolder checks if the backups folder exists or creates it.
+func (coo *Coordinator) checkBlockBackupsFolder() error {
+
+	if !coo.opts.blockBackupsEnabled {
+		return nil
+	}
+
+	if coo.opts.blockBackupsFolderPath == "" {
+		return errors.New("block backups enabled, but no backup folder path specified")
+	}
+
+	fileInfo, err := os.Stat(coo.opts.blockBackupsFolderPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("block backups folder path (%s) can't be checked, error: %w", coo.opts.blockBackupsFolderPath, err)
+		}
+
+		// directory does not exist => create it
+		if err := os.MkdirAll(coo.opts.blockBackupsFolderPath, 0o700); err != nil {
+			return fmt.Errorf("block backups folder path (%s) can't be created, error: %w", coo.opts.blockBackupsFolderPath, err)
+		}
+
+	} else if !fileInfo.IsDir() {
+		return fmt.Errorf("block backups folder path (%s) is not a directory", coo.opts.blockBackupsFolderPath)
+	}
+
+	return nil
+}
+
+// backupBlock stores the binary data of the block to the block backups folder.
+func (coo *Coordinator) backupBlock(block *iotago.Block) error {
+
+	if !coo.opts.blockBackupsEnabled {
+		return nil
+	}
+
+	var fileNameSuffix string
+	switch payload := block.Payload.(type) {
+	case *iotago.Milestone:
+		fileNameSuffix = fmt.Sprintf("ms_%d.bin", payload.Index)
+	default:
+		fileNameSuffix = fmt.Sprintf("cp_%s.bin", block.MustID().ToHex())
+	}
+
+	filePath := path.Join(coo.opts.blockBackupsFolderPath, fmt.Sprintf("%s_%s", time.Now().Format("20060102030405"), fileNameSuffix))
+
+	data, err := block.Serialize(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return fmt.Errorf("serialize block backup data failed: %w", err)
+	}
+
+	if err := ioutils.WriteToFile(filePath, data, 0o700); err != nil {
+		return fmt.Errorf("storing block backup failed: %w", err)
+	}
+
+	return nil
 }
 
 // InitState loads an existing state file or bootstraps the network.
@@ -398,6 +476,10 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 		return common.CriticalError(fmt.Errorf("failed to create milestone: %w", err))
 	}
 
+	if err := coo.backupBlock(milestoneBlock); err != nil {
+		return common.CriticalError(fmt.Errorf("failed to create milestone block backup: %w", err))
+	}
+
 	milestoneID, err := milestoneBlock.Payload.(*iotago.Milestone).ID()
 	if err != nil {
 		return common.CriticalError(fmt.Errorf("failed to compute milestone ID: %w", err))
@@ -498,6 +580,10 @@ func (coo *Coordinator) IssueCheckpoint(checkpointIndex int, lastCheckpointBlock
 		block, err := coo.createCheckpoint(parents)
 		if err != nil {
 			return iotago.EmptyBlockID(), common.SoftError(fmt.Errorf("failed to create checkPoint: %w", err))
+		}
+
+		if err := coo.backupBlock(block); err != nil {
+			return iotago.EmptyBlockID(), common.SoftError(fmt.Errorf("failed to create checkPoint block backup: %w", err))
 		}
 
 		blockID, err := coo.sendBlockFunc(block)
