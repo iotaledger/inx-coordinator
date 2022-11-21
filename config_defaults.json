@@ -51,7 +51,8 @@
     "blockBackups": {
       "enabled": true,
       "folderPath": "block_backups"
-    }
+    },
+    "debugFakeMilestoneTimestamps": false
   },
   "migrator": {
     "enabled": false,
