@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/events"
+	"github.com/iotaledger/hive.go/core/generics/options"
 	"github.com/iotaledger/hive.go/core/ioutils"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/syncutils"
@@ -108,8 +109,24 @@ type Coordinator struct {
 	sendBlockFunc SendBlockFunc
 	// used to trigger an event if no new milestones are received for some time.
 	milestoneTimeoutTicker *timeutil.Ticker
-	// holds the coordinator options.
-	opts *Options
+
+	// options
+	// the path to the state file of the coordinator.
+	stateFilePath string
+	// the interval milestones are issued.
+	milestoneInterval time.Duration
+	// the duration after which an event is triggered if no new milestones are received.
+	milestoneTimeout time.Duration
+	// the timeout between signing retries.
+	signingRetryTimeout time.Duration
+	// the amount of times to retry signing before bailing and shutting down the Coordinator.
+	signingRetryAmount int
+	// the optional quorum used by the coordinator to check for correct ledger state calculation.
+	quorum *quorum
+	// whether all blocks that are issued by the coordinator should be stored to disk before being submitted to the network.
+	blockBackupsEnabled bool
+	// the path to the folder where block backups are stored.
+	blockBackupsFolderPath string
 
 	// back pressure functions that signal congestion.
 	backpressureFuncs []BackPressureFunc
@@ -131,111 +148,69 @@ var (
 	emptyMilestoneID = iotago.MilestoneID{}
 )
 
-// the default options applied to the Coordinator.
-var defaultOptions = []Option{
-	WithStateFilePath(defaultStateFilePath),
-	WithMilestoneInterval(defaultMilestoneInterval),
-	WithMilestoneTimeout(defaultMilestoneTimeout),
-	WithSigningRetryAmount(10),
-	WithSigningRetryTimeout(2 * time.Second),
-	WithBlockBackups(true, "block_backups"),
-}
-
-// Options define options for the Coordinator.
-type Options struct {
-	// the logger used to log events.
-	logger *logger.Logger
-	// the path to the state file of the coordinator.
-	stateFilePath string
-	// the interval milestones are issued.
-	milestoneInterval time.Duration
-	// the duration after which an event is triggered if no new milestones are received.
-	milestoneTimeout time.Duration
-	// the timeout between signing retries.
-	signingRetryTimeout time.Duration
-	// the amount of times to retry signing before bailing and shutting down the Coordinator.
-	signingRetryAmount int
-	// the optional quorum used by the coordinator to check for correct ledger state calculation.
-	quorum *quorum
-	// whether all blocks that are issued by the coordinator should be stored to disk before being submitted to the network.
-	blockBackupsEnabled bool
-	// the path to the folder where block backups are stored.
-	blockBackupsFolderPath string
-}
-
-// applies the given Option.
-func (so *Options) apply(opts ...Option) {
-	for _, opt := range opts {
-		opt(so)
-	}
-}
-
 // WithLogger enables logging within the coordinator.
-func WithLogger(logger *logger.Logger) Option {
-	return func(opts *Options) {
-		opts.logger = logger
+func WithLogger(log *logger.Logger) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.WrappedLogger = logger.NewWrappedLogger(log)
 	}
 }
 
 // WithStateFilePath defines the path to the state file of the coordinator.
-func WithStateFilePath(stateFilePath string) Option {
-	return func(opts *Options) {
-		opts.stateFilePath = stateFilePath
+func WithStateFilePath(stateFilePath string) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.stateFilePath = stateFilePath
 	}
 }
 
 // WithMilestoneInterval defines interval milestones are issued.
-func WithMilestoneInterval(milestoneInterval time.Duration) Option {
-	return func(opts *Options) {
-		opts.milestoneInterval = milestoneInterval
+func WithMilestoneInterval(milestoneInterval time.Duration) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.milestoneInterval = milestoneInterval
 	}
 }
 
 // WithMilestoneTimeout defines the duration after which an event is triggered if no new milestones are received.
-func WithMilestoneTimeout(milestoneTimeout time.Duration) Option {
-	return func(opts *Options) {
-		opts.milestoneTimeout = milestoneTimeout
+func WithMilestoneTimeout(milestoneTimeout time.Duration) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.milestoneTimeout = milestoneTimeout
 	}
 }
 
 // WithSigningRetryTimeout defines signing retry timeout.
-func WithSigningRetryTimeout(timeout time.Duration) Option {
-	return func(opts *Options) {
-		opts.signingRetryTimeout = timeout
+func WithSigningRetryTimeout(timeout time.Duration) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.signingRetryTimeout = timeout
 	}
 }
 
 // WithSigningRetryAmount defines signing retry amount.
-func WithSigningRetryAmount(amount int) Option {
-	return func(opts *Options) {
-		opts.signingRetryAmount = amount
+func WithSigningRetryAmount(amount int) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.signingRetryAmount = amount
 	}
 }
 
 // WithQuorum defines a quorum, which is used to check the correct ledger state of the coordinator.
 // If no quorumGroups are given, the quorum is disabled.
-func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) Option {
-	return func(opts *Options) {
+func WithQuorum(quorumEnabled bool, quorumGroups map[string][]*QuorumClientConfig, timeout time.Duration) options.Option[Coordinator] {
+	return func(c *Coordinator) {
 		if !quorumEnabled {
-			opts.quorum = nil
+			c.quorum = nil
 
 			return
 		}
-		opts.quorum = newQuorum(quorumGroups, timeout)
+		c.quorum = newQuorum(quorumGroups, timeout)
 	}
 }
 
 // WithBlockBackups defines whether all blocks that are issued by the coordinator
 // should be stored to disk before being submitted to the network.
-func WithBlockBackups(blockBackupsEnabled bool, blockBackupsFolderPath string) Option {
-	return func(opts *Options) {
-		opts.blockBackupsEnabled = blockBackupsEnabled
-		opts.blockBackupsFolderPath = blockBackupsFolderPath
+func WithBlockBackups(blockBackupsEnabled bool, blockBackupsFolderPath string) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.blockBackupsEnabled = blockBackupsEnabled
+		c.blockBackupsFolderPath = blockBackupsFolderPath
 	}
 }
-
-// Option is a function setting a coordinator option.
-type Option func(opts *Options)
 
 // New creates a new coordinator instance.
 func New(
@@ -246,17 +221,13 @@ func New(
 	migratorService *migrator.Service,
 	treasuryOutputFunc UnspentTreasuryOutputFunc,
 	sendBlockFunc SendBlockFunc,
-	opts ...Option) (*Coordinator, error) {
-
-	options := &Options{}
-	options.apply(defaultOptions...)
-	options.apply(opts...)
+	opts ...options.Option[Coordinator]) (*Coordinator, error) {
 
 	if migratorService != nil && treasuryOutputFunc == nil {
 		return nil, common.CriticalError(errors.New("migrator configured, but no treasury output fetch function provided"))
 	}
 
-	result := &Coordinator{
+	result := options.Apply(&Coordinator{
 		merkleRootFunc:         merkleRootFunc,
 		isNodeSynced:           nodeSyncedFunc,
 		protoParamsFunc:        protoParamsFunc,
@@ -264,8 +235,16 @@ func New(
 		migratorService:        migratorService,
 		treasuryOutputFunc:     treasuryOutputFunc,
 		sendBlockFunc:          sendBlockFunc,
-		opts:                   options,
 		milestoneTimeoutTicker: nil,
+
+		stateFilePath:          defaultStateFilePath,
+		milestoneInterval:      defaultMilestoneInterval,
+		milestoneTimeout:       defaultMilestoneTimeout,
+		signingRetryTimeout:    2 * time.Second,
+		signingRetryAmount:     10,
+		quorum:                 nil,
+		blockBackupsEnabled:    true,
+		blockBackupsFolderPath: "block_backups",
 
 		Events: &Events{
 			IssuedCheckpointBlock: events.NewEvent(CheckpointCaller),
@@ -274,8 +253,7 @@ func New(
 			QuorumFinished:        events.NewEvent(QuorumFinishedCaller),
 			MilestoneTimeout:      events.NewEvent(events.VoidCaller),
 		},
-	}
-	result.WrappedLogger = logger.NewWrappedLogger(options.logger)
+	}, opts)
 
 	if err := result.checkBlockBackupsFolder(); err != nil {
 		return nil, common.CriticalError(err)
@@ -287,27 +265,27 @@ func New(
 // checkBlockBackupsFolder checks if the backups folder exists or creates it.
 func (coo *Coordinator) checkBlockBackupsFolder() error {
 
-	if !coo.opts.blockBackupsEnabled {
+	if !coo.blockBackupsEnabled {
 		return nil
 	}
 
-	if coo.opts.blockBackupsFolderPath == "" {
+	if coo.blockBackupsFolderPath == "" {
 		return errors.New("block backups enabled, but no backup folder path specified")
 	}
 
-	fileInfo, err := os.Stat(coo.opts.blockBackupsFolderPath)
+	fileInfo, err := os.Stat(coo.blockBackupsFolderPath)
 	if err != nil {
 		if !os.IsNotExist(err) {
-			return fmt.Errorf("block backups folder path (%s) can't be checked, error: %w", coo.opts.blockBackupsFolderPath, err)
+			return fmt.Errorf("block backups folder path (%s) can't be checked, error: %w", coo.blockBackupsFolderPath, err)
 		}
 
 		// directory does not exist => create it
-		if err := os.MkdirAll(coo.opts.blockBackupsFolderPath, 0o700); err != nil {
-			return fmt.Errorf("block backups folder path (%s) can't be created, error: %w", coo.opts.blockBackupsFolderPath, err)
+		if err := os.MkdirAll(coo.blockBackupsFolderPath, 0o700); err != nil {
+			return fmt.Errorf("block backups folder path (%s) can't be created, error: %w", coo.blockBackupsFolderPath, err)
 		}
 
 	} else if !fileInfo.IsDir() {
-		return fmt.Errorf("block backups folder path (%s) is not a directory", coo.opts.blockBackupsFolderPath)
+		return fmt.Errorf("block backups folder path (%s) is not a directory", coo.blockBackupsFolderPath)
 	}
 
 	return nil
@@ -316,7 +294,7 @@ func (coo *Coordinator) checkBlockBackupsFolder() error {
 // backupBlock stores the binary data of the block to the block backups folder.
 func (coo *Coordinator) backupBlock(block *iotago.Block) error {
 
-	if !coo.opts.blockBackupsEnabled {
+	if !coo.blockBackupsEnabled {
 		return nil
 	}
 
@@ -328,7 +306,7 @@ func (coo *Coordinator) backupBlock(block *iotago.Block) error {
 		fileNameSuffix = fmt.Sprintf("cp_%s.bin", block.MustID().ToHex())
 	}
 
-	filePath := path.Join(coo.opts.blockBackupsFolderPath, fmt.Sprintf("%s_%s", time.Now().Format("20060102030405"), fileNameSuffix))
+	filePath := path.Join(coo.blockBackupsFolderPath, fmt.Sprintf("%s_%s", time.Now().Format("20060102030405"), fileNameSuffix))
 
 	data, err := block.Serialize(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -346,7 +324,7 @@ func (coo *Coordinator) backupBlock(block *iotago.Block) error {
 // All errors are critical.
 func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneIndex, latestMilestone *LatestMilestoneInfo) error {
 
-	_, err := os.Stat(coo.opts.stateFilePath)
+	_, err := os.Stat(coo.stateFilePath)
 	stateFileExists := !os.IsNotExist(err)
 
 	if bootstrap {
@@ -390,11 +368,11 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneInd
 	}
 
 	if !stateFileExists {
-		return fmt.Errorf("state file not found: %v", coo.opts.stateFilePath)
+		return fmt.Errorf("state file not found: %v", coo.stateFilePath)
 	}
 
 	coo.state = &State{}
-	if err := ioutils.ReadJSONFromFile(coo.opts.stateFilePath, coo.state); err != nil {
+	if err := ioutils.ReadJSONFromFile(coo.stateFilePath, coo.state); err != nil {
 		return err
 	}
 
@@ -428,9 +406,9 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 	}
 
 	// ask the quorum for correct ledger state if enabled
-	if coo.opts.quorum != nil {
+	if coo.quorum != nil {
 		ts := time.Now()
-		err := coo.opts.quorum.checkMerkleTreeHash(merkleProof, newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, previousMilestoneID, func(groupName string, entry *quorumGroupEntry, err error) {
+		err := coo.quorum.checkMerkleTreeHash(merkleProof, newMilestoneIndex, uint32(newMilestoneTimestamp.Unix()), parents, previousMilestoneID, func(groupName string, entry *quorumGroupEntry, err error) {
 			coo.LogInfof("coordinator quorum group encountered an error, group: %s, baseURL: %s, err: %s", groupName, entry.stats.BaseURL, err)
 		})
 
@@ -486,7 +464,7 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 	}
 
 	// rename the coordinator state file to mark the state as invalid
-	if err := os.Rename(coo.opts.stateFilePath, fmt.Sprintf("%s_old", coo.opts.stateFilePath)); err != nil && !os.IsNotExist(err) {
+	if err := os.Rename(coo.stateFilePath, fmt.Sprintf("%s_old", coo.stateFilePath)); err != nil && !os.IsNotExist(err) {
 		return common.CriticalError(fmt.Errorf("unable to rename old coordinator state file: %w", err))
 	}
 
@@ -507,7 +485,7 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 	coo.state.LatestMilestoneIndex = newMilestoneIndex
 	coo.state.LatestMilestoneTime = newMilestoneTimestamp
 
-	if err := ioutils.WriteJSONToFile(coo.opts.stateFilePath, coo.state, 0660); err != nil {
+	if err := ioutils.WriteJSONToFile(coo.stateFilePath, coo.state, 0660); err != nil {
 		return common.CriticalError(fmt.Errorf("failed to update coordinator state file: %w", err))
 	}
 
@@ -626,7 +604,7 @@ func (coo *Coordinator) IssueMilestone(parents iotago.BlockIDs) (iotago.BlockID,
 
 // Interval returns the interval milestones should be issued.
 func (coo *Coordinator) Interval() time.Duration {
-	return coo.opts.milestoneInterval
+	return coo.milestoneInterval
 }
 
 // State returns the current state of the coordinator.
@@ -653,11 +631,11 @@ func (coo *Coordinator) checkBackPressureFunctions() bool {
 
 // QuorumStats returns statistics about the response time and errors of every node in the quorum.
 func (coo *Coordinator) QuorumStats() []QuorumClientStatistic {
-	if coo.opts.quorum == nil {
+	if coo.quorum == nil {
 		return nil
 	}
 
-	return coo.opts.quorum.quorumStatsSnapshot()
+	return coo.quorum.quorumStatsSnapshot()
 }
 
 // ResetMilestoneTimeoutTicker stops a running milestone timeout ticker and starts a new one.
@@ -670,7 +648,7 @@ func (coo *Coordinator) ResetMilestoneTimeoutTicker() {
 
 	coo.milestoneTimeoutTicker = timeutil.NewTicker(func() {
 		coo.Events.MilestoneTimeout.Trigger()
-	}, coo.opts.milestoneTimeout)
+	}, coo.milestoneTimeout)
 }
 
 // StopMilestoneTimeoutTicker stops the milestone timeout ticker.
