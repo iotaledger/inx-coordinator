@@ -71,7 +71,7 @@ linters:
         - importas
         #- interfacer
         - makezero
-        - maligned
+        #- maligned
         - misspell
         - nakedret
         - nilerr

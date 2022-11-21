@@ -78,15 +78,15 @@ func (coo *Coordinator) createMilestone(index iotago.MilestoneIndex, timestamp u
 // wraps the given MilestoneSigningFunc into a with retries enhanced version.
 func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.MilestoneSigningFunc) iotago.MilestoneSigningFunc {
 	return func(pubKeys []iotago.MilestonePublicKey, msEssence []byte) (sigs []iotago.MilestoneSignature, err error) {
-		if coo.opts.signingRetryAmount <= 0 {
+		if coo.signingRetryAmount <= 0 {
 			return signingFunc(pubKeys, msEssence)
 		}
-		for i := 0; i < coo.opts.signingRetryAmount; i++ {
+		for i := 0; i < coo.signingRetryAmount; i++ {
 			sigs, err = signingFunc(pubKeys, msEssence)
 			if err != nil {
-				if i+1 != coo.opts.signingRetryAmount {
-					coo.LogWarnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.opts.signingRetryTimeout, coo.opts.signingRetryAmount-(i+1))
-					time.Sleep(coo.opts.signingRetryTimeout)
+				if i+1 != coo.signingRetryAmount {
+					coo.LogWarnf("signing attempt failed: %s, retrying in %v, retries left %d", err, coo.signingRetryTimeout, coo.signingRetryAmount-(i+1))
+					time.Sleep(coo.signingRetryTimeout)
 				}
 
 				continue
@@ -94,7 +94,7 @@ func (coo *Coordinator) createSigningFuncWithRetries(signingFunc iotago.Mileston
 
 			return sigs, nil
 		}
-		coo.LogWarnf("signing failed after %d attempts: %s ", coo.opts.signingRetryAmount, err)
+		coo.LogWarnf("signing failed after %d attempts: %s ", coo.signingRetryAmount, err)
 
 		return
 	}
