@@ -119,16 +119,17 @@ Example:
 
 ## <a id="coordinator"></a> 4. Coordinator
 
-| Name                                      | Description                                                                      | Type   | Default value       |
-| ----------------------------------------- | -------------------------------------------------------------------------------- | ------ | ------------------- |
-| stateFilePath                             | The path to the state file of the coordinator                                    | string | "coordinator.state" |
-| interval                                  | The interval milestones are issued                                               | string | "5s"                |
-| milestoneTimeout                          | The duration after which an event is triggered if no new milestones are received | string | "30s"               |
-| [signing](#coordinator_signing)           | Configuration for signing                                                        | object |                     |
-| [quorum](#coordinator_quorum)             | Configuration for quorum                                                         | object |                     |
-| [checkpoints](#coordinator_checkpoints)   | Configuration for checkpoints                                                    | object |                     |
-| [tipsel](#coordinator_tipsel)             | Configuration for Tipselection                                                   | object |                     |
-| [blockBackups](#coordinator_blockbackups) | Configuration for blockBackups                                                   | object |                     |
+| Name                                      | Description                                                                                                  | Type    | Default value       |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------ | ------- | ------------------- |
+| stateFilePath                             | The path to the state file of the coordinator                                                                | string  | "coordinator.state" |
+| interval                                  | The interval milestones are issued                                                                           | string  | "5s"                |
+| milestoneTimeout                          | The duration after which an event is triggered if no new milestones are received                             | string  | "30s"               |
+| [signing](#coordinator_signing)           | Configuration for signing                                                                                    | object  |                     |
+| [quorum](#coordinator_quorum)             | Configuration for quorum                                                                                     | object  |                     |
+| [checkpoints](#coordinator_checkpoints)   | Configuration for checkpoints                                                                                | object  |                     |
+| [tipsel](#coordinator_tipsel)             | Configuration for Tipselection                                                                               | object  |                     |
+| [blockBackups](#coordinator_blockbackups) | Configuration for blockBackups                                                                               | object  |                     |
+| debugFakeMilestoneTimestamps              | Whether the coordinator will fake timestamps of milestones if the interval is below 1s (use for tests only!) | boolean | false               |
 
 ### <a id="coordinator_signing"></a> Signing
 
@@ -200,7 +201,8 @@ Example:
       "blockBackups": {
         "enabled": true,
         "folderPath": "block_backups"
-      }
+      },
+      "debugFakeMilestoneTimestamps": false
     }
   }
 ```

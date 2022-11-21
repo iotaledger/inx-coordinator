@@ -42,6 +42,8 @@ type ParametersCoordinator struct {
 		Enabled    bool   `default:"true" usage:"whether all blocks that are issued by the coordinator should be stored to disk before being submitted to the network"`
 		FolderPath string `default:"block_backups" usage:"the path to the folder where block backups are stored"`
 	}
+
+	DebugFakeMilestoneTimestamps bool `default:"false" usage:"whether the coordinator will fake timestamps of milestones if the interval is below 1s (use for tests only!)"`
 }
 
 var ParamsCoordinator = &ParametersCoordinator{

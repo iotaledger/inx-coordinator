@@ -166,6 +166,7 @@ func provide(c *dig.Container) error {
 				coordinator.WithSigningRetryAmount(ParamsCoordinator.Signing.RetryAmount),
 				coordinator.WithSigningRetryTimeout(ParamsCoordinator.Signing.RetryTimeout),
 				coordinator.WithBlockBackups(ParamsCoordinator.BlockBackups.Enabled, ParamsCoordinator.BlockBackups.FolderPath),
+				coordinator.WithDebugFakeMilestoneTimestamps(ParamsCoordinator.DebugFakeMilestoneTimestamps),
 			)
 			if err != nil {
 				return nil, err
@@ -361,7 +362,7 @@ func run() error {
 				var milestoneTips iotago.BlockIDs
 
 				// skip signal to prevent milestone issuance with same timestamp
-				if deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
+				if !deps.Coordinator.DebugFakeMilestoneTimestamps() && deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
 					CoreComponent.LogWarn("skipping milestone signal due to too fast ticker")
 
 					continue

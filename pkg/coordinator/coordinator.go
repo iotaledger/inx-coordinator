@@ -55,6 +55,8 @@ var (
 	ErrNetworkBootstrapped = errors.New("network already bootstrapped")
 	// ErrNodeLoadTooHigh is returned if the backpressure func says the node load is too high.
 	ErrNodeLoadTooHigh = errors.New("node load too high")
+	// ErrMilestoneTimestampDidNotIncrease is returned when the new milestone timestamp is not newer than the last milestone's timestamp.
+	ErrMilestoneTimestampDidNotIncrease = errors.New("new milestone timestamp must be newer than the last milestone's timestamp")
 )
 
 // Events are the events issued by the coordinator.
@@ -127,6 +129,8 @@ type Coordinator struct {
 	blockBackupsEnabled bool
 	// the path to the folder where block backups are stored.
 	blockBackupsFolderPath string
+	// whether the coordinator will fake timestamps of milestones if the interval is below 1s (use for tests only!)
+	debugFakeMilestoneTimestamps bool
 
 	// back pressure functions that signal congestion.
 	backpressureFuncs []BackPressureFunc
@@ -212,6 +216,14 @@ func WithBlockBackups(blockBackupsEnabled bool, blockBackupsFolderPath string) o
 	}
 }
 
+// WithDebugFakeMilestoneTimestamps defines whether the coordinator will fake timestamps of milestones
+// if the interval is below 1s (use for tests only!)
+func WithDebugFakeMilestoneTimestamps(debugFakeMilestoneTimestamps bool) options.Option[Coordinator] {
+	return func(c *Coordinator) {
+		c.debugFakeMilestoneTimestamps = debugFakeMilestoneTimestamps
+	}
+}
+
 // New creates a new coordinator instance.
 func New(
 	merkleRootFunc ComputeMilestoneMerkleRoots,
@@ -254,6 +266,10 @@ func New(
 			MilestoneTimeout:      events.NewEvent(events.VoidCaller),
 		},
 	}, opts)
+
+	if !result.debugFakeMilestoneTimestamps && result.milestoneInterval < time.Second {
+		return nil, common.CriticalError(errors.New("the milestone interval must be at least 1s"))
+	}
 
 	if err := result.checkBlockBackupsFolder(); err != nil {
 		return nil, common.CriticalError(err)
@@ -391,11 +407,22 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneInd
 // Returns non-critical and critical errors.
 func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMilestoneIndex iotago.MilestoneIndex, previousMilestoneID iotago.MilestoneID) error {
 
-	parents = parents.RemoveDupsAndSort()
-
 	// We have to set a timestamp for when we run the white-flag mutations due to the semantic validation.
 	// This should be exactly the same one used when issuing the milestone later on.
 	newMilestoneTimestamp := time.Now()
+
+	// we need to take care that the new milestone timestamp increased to satisfy the L1 protocol rules.
+	if newMilestoneTimestamp.Unix() < coo.state.LatestMilestoneTime.Add(time.Second).Unix() {
+		if !coo.debugFakeMilestoneTimestamps {
+			return common.SoftError(ErrMilestoneTimestampDidNotIncrease)
+		}
+
+		// if the debug mode is enabled, we fake the timestamps so that the L1 protocol rules checks still pass,
+		// but we are able to issue milestones faster than 1s interval.
+		newMilestoneTimestamp = coo.state.LatestMilestoneTime.Add(time.Second)
+	}
+
+	parents = parents.RemoveDupsAndSort()
 
 	// compute merkle tree root
 	// we pass a background context here to not cancel the white-flag computation!
@@ -610,6 +637,10 @@ func (coo *Coordinator) Interval() time.Duration {
 // State returns the current state of the coordinator.
 func (coo *Coordinator) State() *State {
 	return coo.state
+}
+
+func (coo *Coordinator) DebugFakeMilestoneTimestamps() bool {
+	return coo.debugFakeMilestoneTimestamps
 }
 
 // AddBackPressureFunc adds a BackPressureFunc.
