@@ -249,14 +249,15 @@ func New(
 		sendBlockFunc:          sendBlockFunc,
 		milestoneTimeoutTicker: nil,
 
-		stateFilePath:          defaultStateFilePath,
-		milestoneInterval:      defaultMilestoneInterval,
-		milestoneTimeout:       defaultMilestoneTimeout,
-		signingRetryTimeout:    2 * time.Second,
-		signingRetryAmount:     10,
-		quorum:                 nil,
-		blockBackupsEnabled:    true,
-		blockBackupsFolderPath: "block_backups",
+		stateFilePath:                defaultStateFilePath,
+		milestoneInterval:            defaultMilestoneInterval,
+		milestoneTimeout:             defaultMilestoneTimeout,
+		signingRetryTimeout:          2 * time.Second,
+		signingRetryAmount:           10,
+		quorum:                       nil,
+		blockBackupsEnabled:          true,
+		blockBackupsFolderPath:       "block_backups",
+		debugFakeMilestoneTimestamps: false,
 
 		Events: &Events{
 			IssuedCheckpointBlock: events.NewEvent(CheckpointCaller),
@@ -373,7 +374,7 @@ func (coo *Coordinator) InitState(bootstrap bool, startIndex iotago.MilestoneInd
 		state.LatestMilestoneBlockID = iotago.EmptyBlockID()
 		state.LatestMilestoneID = latestMilestoneID
 		state.LatestMilestoneIndex = startIndex - 1
-		state.LatestMilestoneTime = time.Now()
+		state.LatestMilestoneTime = time.Time{}
 
 		coo.state = state
 		coo.bootstrapped = false
@@ -415,6 +416,11 @@ func (coo *Coordinator) createAndSendMilestone(parents iotago.BlockIDs, newMiles
 	if newMilestoneTimestamp.Unix() < coo.state.LatestMilestoneTime.Add(time.Second).Unix() {
 		if !coo.debugFakeMilestoneTimestamps {
 			return common.SoftError(ErrMilestoneTimestampDidNotIncrease)
+		}
+
+		// in bootstrap case, we take the current time for the last milestone timestamp
+		if coo.state.LatestMilestoneTime.IsZero() {
+			coo.state.LatestMilestoneTime = time.Now()
 		}
 
 		// if the debug mode is enabled, we fake the timestamps so that the L1 protocol rules checks still pass,
