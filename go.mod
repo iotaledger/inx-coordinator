@@ -6,7 +6,7 @@ require (
 	github.com/bits-and-blooms/bitset v1.4.0
 	github.com/iotaledger/hive.go/core v1.0.0-rc.2
 	github.com/iotaledger/hive.go/serializer/v2 v2.0.0-rc.1
-	github.com/iotaledger/hornet/v2 v2.0.0-rc.2
+	github.com/iotaledger/hornet/v2 v2.0.0-rc.3
 	github.com/iotaledger/inx-app v1.0.0-rc.1
 	github.com/iotaledger/inx/go v1.0.0-rc.1
 	github.com/iotaledger/iota.go v1.0.0
@@ -53,6 +53,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/mr-tron/base58 v1.2.0 // indirect
+	github.com/onsi/gomega v1.24.1 // indirect
 	github.com/panjf2000/ants/v2 v2.7.1 // indirect
 	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
