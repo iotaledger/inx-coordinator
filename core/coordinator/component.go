@@ -19,7 +19,7 @@ import (
 	"github.com/iotaledger/hive.go/core/syncutils"
 	"github.com/iotaledger/hive.go/core/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
-	"github.com/iotaledger/inx-app/nodebridge"
+	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
 	"github.com/iotaledger/inx-coordinator/pkg/daemon"
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
