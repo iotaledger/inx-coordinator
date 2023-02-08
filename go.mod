@@ -16,7 +16,7 @@ require (
 	github.com/stretchr/testify v1.8.1
 	go.uber.org/dig v1.16.1
 	golang.org/x/crypto v0.5.0
-	google.golang.org/grpc v1.52.0
+	google.golang.org/grpc v1.53.0
 )
 
 require (
