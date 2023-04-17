@@ -10,12 +10,12 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/generics/options"
-	"github.com/iotaledger/hive.go/core/ioutils"
-	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/logger"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
+	"github.com/iotaledger/hive.go/runtime/options"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-coordinator/pkg/migrator"
@@ -62,15 +62,17 @@ var (
 // Events are the events issued by the coordinator.
 type Events struct {
 	// Fired when a checkpoint block is issued.
-	IssuedCheckpointBlock *events.Event
+	// params: checkpointIndex int, tipIndex int, tipsTotal int, blockID iotago.BlockID
+	IssuedCheckpointBlock *event.Event4[int, int, int, iotago.BlockID]
 	// Fired when a milestone is issued.
-	IssuedMilestone *events.Event
+	// params: index iotago.MilestoneIndex, milestoneID iotago.MilestoneID, blockID iotago.BlockID
+	IssuedMilestone *event.Event3[iotago.MilestoneIndex, iotago.MilestoneID, iotago.BlockID]
 	// SoftError is triggered when a soft error is encountered.
-	SoftError *events.Event
+	SoftError *event.Event1[error]
 	// QuorumFinished is triggered after a coordinator quorum call was finished.
-	QuorumFinished *events.Event
+	QuorumFinished *event.Event1[*QuorumFinishedResult]
 	// MilestoneTimeout is triggered if no new milestones are received for some time.
-	MilestoneTimeout *events.Event
+	MilestoneTimeout *event.Event
 }
 
 // IsNodeSyncedFunc should only return true if the node connected to the coordinator is synced.
@@ -260,11 +262,11 @@ func New(
 		debugFakeMilestoneTimestamps: false,
 
 		Events: &Events{
-			IssuedCheckpointBlock: events.NewEvent(CheckpointCaller),
-			IssuedMilestone:       events.NewEvent(MilestoneCaller),
-			SoftError:             events.NewEvent(events.ErrorCaller),
-			QuorumFinished:        events.NewEvent(QuorumFinishedCaller),
-			MilestoneTimeout:      events.NewEvent(events.VoidCaller),
+			IssuedCheckpointBlock: event.New4[int, int, int, iotago.BlockID](),
+			IssuedMilestone:       event.New3[iotago.MilestoneIndex, iotago.MilestoneID, iotago.BlockID](),
+			SoftError:             event.New1[error](),
+			QuorumFinished:        event.New1[*QuorumFinishedResult](),
+			MilestoneTimeout:      event.New(),
 		},
 	}, opts)
 
