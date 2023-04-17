@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/iotaledger/inx-coordinator/core/app"
+	"github.com/iotaledger/inx-coordinator/components/app"
 )
 
 func main() {
