@@ -8,9 +8,9 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
-	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/shutdown"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	validator "github.com/iotaledger/hornet/v2/pkg/model/migrator"
 	"github.com/iotaledger/inx-coordinator/pkg/daemon"
@@ -27,24 +27,20 @@ const (
 )
 
 func init() {
-	Plugin = &app.Plugin{
-		Component: &app.Component{
-			Name:      "Migrator",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
-		},
-		IsEnabled: func() bool {
-			return ParamsMigrator.Enabled
-		},
+	Component = &app.Component{
+		Name:      "Migrator",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Params:    params,
+		IsEnabled: func(_ *dig.Container) bool { return ParamsMigrator.Enabled },
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	Plugin *app.Plugin
-	deps   dependencies
+	Component *app.Component
+	deps      dependencies
 
 	bootstrap  = flag.Bool(CfgMigratorBootstrap, false, "bootstrap the migration process")
 	startIndex = flag.Uint32(CfgMigratorStartIndex, 1, "index of the first milestone to migrate")
@@ -65,7 +61,7 @@ func provide(c *dig.Container) error {
 			Client: &http.Client{Timeout: ParamsReceipts.Validator.API.Timeout},
 		})
 		if err != nil {
-			Plugin.LogErrorfAndExit("failed to initialize API: %s", err)
+			Component.LogErrorfAndExit("failed to initialize API: %s", err)
 		}
 
 		return validator.NewValidator(
@@ -82,14 +78,14 @@ func provide(c *dig.Container) error {
 		Validator *validator.Validator
 	}
 
-	if err := c.Provide(func(deps serviceDeps) *migrator.Service {
+	return c.Provide(func(deps serviceDeps) *migrator.Service {
 
 		maxReceiptEntries := ParamsMigrator.ReceiptMaxEntries
 		switch {
 		case maxReceiptEntries > iotago.MaxMigratedFundsEntryCount:
-			Plugin.LogErrorfAndExit("%s (set to %d) can be max %d", Plugin.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
+			Component.LogErrorfAndExit("%s (set to %d) can be max %d", Component.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)), maxReceiptEntries, iotago.MaxMigratedFundsEntryCount)
 		case maxReceiptEntries <= 0:
-			Plugin.LogErrorfAndExit("%s must be greather than 0", Plugin.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
+			Component.LogErrorfAndExit("%s must be greather than 0", Component.App().Config().GetParameterPath(&(ParamsMigrator.ReceiptMaxEntries)))
 		}
 
 		return migrator.NewService(
@@ -97,11 +93,7 @@ func provide(c *dig.Container) error {
 			ParamsMigrator.StateFilePath,
 			ParamsMigrator.ReceiptMaxEntries,
 		)
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func configure() error {
@@ -112,7 +104,7 @@ func configure() error {
 	}
 
 	if err := deps.MigratorService.InitState(msIndex); err != nil {
-		Plugin.LogFatalfAndExit("failed to initialize migrator: %s", err)
+		Component.LogFatalfAndExit("failed to initialize migrator: %s", err)
 	}
 
 	return nil
@@ -120,8 +112,8 @@ func configure() error {
 
 func run() error {
 
-	if err := Plugin.App().Daemon().BackgroundWorker(Plugin.Name, func(ctx context.Context) {
-		Plugin.LogInfof("Starting %s ... done", Plugin.Name)
+	if err := Component.App().Daemon().BackgroundWorker(Component.Name, func(ctx context.Context) {
+		Component.LogInfof("Starting %s ... done", Component.Name)
 		deps.MigratorService.Start(ctx, func(err error) bool {
 
 			if err := common.IsCriticalError(err); err != nil {
@@ -135,11 +127,11 @@ func run() error {
 			}
 
 			// lets just log the err and halt querying for a configured period
-			Plugin.LogWarn(err)
+			Component.LogWarn(err)
 
 			return timeutil.Sleep(ctx, ParamsMigrator.QueryCooldownPeriod)
 		})
-		Plugin.LogInfof("Stopping %s ... done", Plugin.Name)
+		Component.LogInfof("Stopping %s ... done", Component.Name)
 	}, daemon.PriorityStopMigrator); err != nil {
 		return err
 	}

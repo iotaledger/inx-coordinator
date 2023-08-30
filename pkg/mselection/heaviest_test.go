@@ -22,10 +22,6 @@ const (
 	numBenchmarkBlocks = 5000
 )
 
-func init() {
-	rand.Seed(0)
-}
-
 func newHPS() *mselection.HeaviestSelector {
 
 	hps := mselection.New(

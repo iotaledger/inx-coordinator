@@ -272,7 +272,7 @@ func (s *HeaviestSelector) OnNewSolidBlock(blockMeta *inx.BlockMetadata) (tracke
 
 	// filter duplicate blocks
 	if _, contains := s.trackedBlocks[blockID]; contains {
-		return
+		return 0
 	}
 
 	parentItems := []*trackedBlock{}

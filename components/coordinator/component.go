@@ -12,12 +12,13 @@ import (
 	flag "github.com/spf13/pflag"
 	"go.uber.org/dig"
 
-	"github.com/iotaledger/hive.go/core/app"
-	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
-	"github.com/iotaledger/hive.go/core/crypto"
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/syncutils"
-	"github.com/iotaledger/hive.go/core/timeutil"
+	"github.com/iotaledger/hive.go/app"
+	"github.com/iotaledger/hive.go/app/shutdown"
+	"github.com/iotaledger/hive.go/crypto"
+	"github.com/iotaledger/hive.go/lo"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
+	"github.com/iotaledger/hive.go/runtime/timeutil"
+	"github.com/iotaledger/hive.go/runtime/valuenotifier"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	"github.com/iotaledger/inx-coordinator/pkg/coordinator"
@@ -44,21 +45,19 @@ var (
 )
 
 func init() {
-	CoreComponent = &app.CoreComponent{
-		Component: &app.Component{
-			Name:      "Coordinator",
-			DepsFunc:  func(cDeps dependencies) { deps = cDeps },
-			Params:    params,
-			Provide:   provide,
-			Configure: configure,
-			Run:       run,
-		},
+	Component = &app.Component{
+		Name:      "Coordinator",
+		DepsFunc:  func(cDeps dependencies) { deps = cDeps },
+		Params:    params,
+		Provide:   provide,
+		Configure: configure,
+		Run:       run,
 	}
 }
 
 var (
-	CoreComponent *app.CoreComponent
-	deps          dependencies
+	Component *app.Component
+	deps      dependencies
 
 	bootstrap  = flag.Bool(CfgCoordinatorBootstrap, false, "bootstrap the network")
 	startIndex = flag.Uint32(CfgCoordinatorStartIndex, 0, "index of the first milestone at bootstrap")
@@ -71,14 +70,6 @@ var (
 	lastCheckpointIndex   int
 	lastCheckpointBlockID iotago.BlockID
 	lastMilestoneBlockID  iotago.BlockID
-
-	// closures.
-	onBlockSolid                *events.Closure
-	onLatestMilestoneChanged    *events.Closure
-	onConfirmedMilestoneChanged *events.Closure
-	onMilestoneTimeout          *events.Closure
-	onIssuedCheckpoint          *events.Closure
-	onIssuedMilestone           *events.Closure
 )
 
 type dependencies struct {
@@ -122,7 +113,7 @@ func provide(c *dig.Container) error {
 
 		var treasuryListener *TreasuryListener
 		if deps.MigratorService != nil {
-			treasuryListener = NewTreasuryListener(CoreComponent.Logger(), deps.NodeBridge)
+			treasuryListener = NewTreasuryListener(Component.Logger(), deps.NodeBridge)
 		}
 
 		initCoordinator := func() (*coordinator.Coordinator, error) {
@@ -143,11 +134,11 @@ func provide(c *dig.Container) error {
 			}
 
 			if ParamsCoordinator.Quorum.Enabled {
-				CoreComponent.LogInfo("running coordinator with quorum enabled")
+				Component.LogInfo("running coordinator with quorum enabled")
 			}
 
 			if deps.MigratorService == nil {
-				CoreComponent.LogInfo("running coordinator without migration enabled")
+				Component.LogInfo("running coordinator without migration enabled")
 			}
 
 			coo, err := coordinator.New(
@@ -158,7 +149,7 @@ func provide(c *dig.Container) error {
 				deps.MigratorService,
 				treasuryListener.LatestTreasuryOutput,
 				sendBlock,
-				coordinator.WithLogger(CoreComponent.Logger()),
+				coordinator.WithLogger(Component.Logger()),
 				coordinator.WithStateFilePath(ParamsCoordinator.StateFilePath),
 				coordinator.WithMilestoneInterval(ParamsCoordinator.Interval),
 				coordinator.WithMilestoneTimeout(ParamsCoordinator.MilestoneTimeout),
@@ -188,7 +179,11 @@ func provide(c *dig.Container) error {
 					Timestamp:   ms.Milestone.Timestamp,
 					MilestoneID: ms.MilestoneID,
 				}
+			} else {
+				// in case we start with a global snapshot on L1, the last milestone might be unknown
+				latestMilestone.Index = deps.NodeBridge.LatestMilestoneIndex()
 			}
+
 			if err := coo.InitState(*bootstrap, *startIndex, latestMilestone); err != nil {
 				return nil, err
 			}
@@ -201,7 +196,7 @@ func provide(c *dig.Container) error {
 
 		coo, err := initCoordinator()
 		if err != nil {
-			CoreComponent.LogErrorAndExit(err)
+			Component.LogErrorAndExit(err)
 		}
 
 		return coordinatorDepsOut{
@@ -220,11 +215,11 @@ func configure() error {
 
 	databasesTainted, err := todo.AreDatabasesTainted()
 	if err != nil {
-		CoreComponent.LogErrorAndExit(err)
+		Component.LogErrorAndExit(err)
 	}
 
 	if databasesTainted {
-		CoreComponent.LogErrorAndExit(ErrDatabaseTainted)
+		Component.LogErrorAndExit(ErrDatabaseTainted)
 	}
 
 	nextCheckpointSignal = make(chan struct{})
@@ -232,8 +227,6 @@ func configure() error {
 	// must be a buffered channel, otherwise signal gets
 	// lost if checkpoint is generated at the same time
 	nextMilestoneSignal = make(chan struct{}, 1)
-
-	configureEvents()
 
 	return nil
 }
@@ -251,14 +244,14 @@ func handleError(err error) bool {
 	}
 
 	if err := common.IsSoftError(err); err != nil {
-		CoreComponent.LogWarn(err)
+		Component.LogWarn(err)
 		deps.Coordinator.Events.SoftError.Trigger(err)
 
 		return false
 	}
 
 	// this should not happen! errors should be defined as a soft or critical error explicitly
-	CoreComponent.LogErrorfAndExit("coordinator plugin hit an unknown error type: %s", err)
+	Component.LogErrorfAndExit("coordinator plugin hit an unknown error type: %s", err)
 
 	return true
 }
@@ -266,8 +259,8 @@ func handleError(err error) bool {
 func run() error {
 
 	// create a background worker that signals to issue new milestones
-	if err := CoreComponent.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(ctx context.Context) {
-		CoreComponent.LogInfo("Start MilestoneTicker")
+	if err := Component.Daemon().BackgroundWorker("Coordinator[MilestoneTicker]", func(ctx context.Context) {
+		Component.LogInfo("Start MilestoneTicker")
 		ticker := timeutil.NewTicker(func() {
 			// issue next milestone
 			select {
@@ -278,37 +271,37 @@ func run() error {
 		}, deps.Coordinator.Interval(), ctx)
 		ticker.WaitForGracefulShutdown()
 	}, daemon.PriorityStopCoordinatorMilestoneTicker); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
-	if err := CoreComponent.Daemon().BackgroundWorker("Coordinator[TangleListener]", func(ctx context.Context) {
-		CoreComponent.LogInfo("Start TangleListener")
+	if err := Component.Daemon().BackgroundWorker("Coordinator[TangleListener]", func(ctx context.Context) {
+		Component.LogInfo("Start TangleListener")
 		deps.TangleListener.Run(ctx)
-		CoreComponent.LogInfo("Stopped TangleListener")
+		Component.LogInfo("Stopped TangleListener")
 	}, daemon.PriorityStopTangleListener); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	if deps.TreasuryListener != nil {
-		if err := CoreComponent.Daemon().BackgroundWorker("Coordinator[TreasuryListener]", func(ctx context.Context) {
-			CoreComponent.LogInfo("Start TreasuryListener")
+		if err := Component.Daemon().BackgroundWorker("Coordinator[TreasuryListener]", func(ctx context.Context) {
+			Component.LogInfo("Start TreasuryListener")
 			deps.TreasuryListener.Run(ctx)
-			CoreComponent.LogInfo("Stopped TreasuryListener")
+			Component.LogInfo("Stopped TreasuryListener")
 		}, daemon.PriorityStopTreasuryListener); err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
+			Component.LogPanicf("failed to start worker: %s", err)
 		}
 	}
 
 	// create a background worker that issues milestones
-	if err := CoreComponent.Daemon().BackgroundWorker("Coordinator", func(ctx context.Context) {
-		attachEvents()
+	if err := Component.Daemon().BackgroundWorker("Coordinator", func(ctx context.Context) {
+		unhookEvents := attachEvents()
 
 		// bootstrap the network if not done yet
 		//nolint:contextcheck // false positive
 		milestoneBlockID, err := deps.Coordinator.Bootstrap()
 		if handleError(err) {
 			// critical error => stop worker
-			detachEvents()
+			unhookEvents()
 
 			return
 		}
@@ -340,7 +333,7 @@ func run() error {
 					if err != nil {
 						// issuing checkpoint failed => not critical
 						if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-							CoreComponent.LogWarn(err)
+							Component.LogWarn(err)
 						}
 
 						return
@@ -350,7 +343,7 @@ func run() error {
 					checkpointBlockID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointBlockID, tips)
 					if err != nil {
 						// issuing checkpoint failed => not critical
-						CoreComponent.LogWarn(err)
+						Component.LogWarn(err)
 
 						return
 					}
@@ -363,7 +356,7 @@ func run() error {
 
 				// skip signal to prevent milestone issuance with same timestamp
 				if !deps.Coordinator.DebugFakeMilestoneTimestamps() && deps.Coordinator.State().LatestMilestoneTime.Unix() == time.Now().Unix() {
-					CoreComponent.LogWarn("skipping milestone signal due to too fast ticker")
+					Component.LogWarn("skipping milestone signal due to too fast ticker")
 
 					continue
 				}
@@ -373,7 +366,7 @@ func run() error {
 				if err != nil {
 					// issuing checkpoint failed => not critical
 					if !errors.Is(err, mselection.ErrNoTipsAvailable) {
-						CoreComponent.LogWarn(err)
+						Component.LogWarn(err)
 					}
 				} else {
 					if len(checkpointTips) > MilestoneMaxAdditionalTipsLimit {
@@ -381,7 +374,7 @@ func run() error {
 						checkpointBlockID, err := deps.Coordinator.IssueCheckpoint(lastCheckpointIndex, lastCheckpointBlockID, checkpointTips[MilestoneMaxAdditionalTipsLimit:])
 						if err != nil {
 							// issuing checkpoint failed => not critical
-							CoreComponent.LogWarn(err)
+							Component.LogWarn(err)
 						} else {
 							// use the new checkpoint block ID
 							lastCheckpointBlockID = checkpointBlockID
@@ -430,9 +423,9 @@ func run() error {
 		}
 
 		deps.Coordinator.StopMilestoneTimeoutTicker()
-		detachEvents()
+		unhookEvents()
 	}, daemon.PriorityStopCoordinator); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
+		Component.LogPanicf("failed to start worker: %s", err)
 	}
 
 	return nil
@@ -499,41 +492,32 @@ func initSigningProvider(signingProviderType string, remoteEndpoint string, keyM
 
 func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.BlockID, error) {
 
-	var err error
-
-	var milestoneConfirmedEventChan chan struct{}
-
+	var milestoneConfirmedListener *valuenotifier.Listener
 	if len(msIndex) > 0 {
-		milestoneConfirmedEventChan = deps.TangleListener.RegisterMilestoneConfirmedEvent(msIndex[0])
-		defer func() {
-			if err != nil {
-				deps.TangleListener.DeregisterMilestoneConfirmedEvent(msIndex[0])
-			}
-		}()
+		milestoneConfirmedListener = deps.TangleListener.RegisterMilestoneConfirmedEvent(msIndex[0])
+		defer milestoneConfirmedListener.Deregister()
 	}
 
 	var blockID iotago.BlockID
-	blockID, err = deps.NodeBridge.SubmitBlock(CoreComponent.Daemon().ContextStopped(), block)
+	blockID, err := deps.NodeBridge.SubmitBlock(Component.Daemon().ContextStopped(), block)
 	if err != nil {
 		return iotago.EmptyBlockID(), err
 	}
 
-	blockSolidEventChan := deps.TangleListener.RegisterBlockSolidEvent(context.Background(), blockID)
-
-	defer func() {
-		if err != nil {
-			deps.TangleListener.DeregisterBlockSolidEvent(blockID)
-		}
-	}()
+	blockSolidListener, err := deps.TangleListener.RegisterBlockSolidEvent(context.Background(), blockID)
+	if err != nil {
+		return iotago.EmptyBlockID(), err
+	}
+	defer blockSolidListener.Deregister()
 
 	// wait until the block is solid
-	if err = events.WaitForChannelClosed(context.Background(), blockSolidEventChan); err != nil {
+	if err := blockSolidListener.Wait(context.Background()); err != nil {
 		return iotago.EmptyBlockID(), err
 	}
 
 	if len(msIndex) > 0 {
 		// if it was a milestone, also wait until the milestone was confirmed
-		if err = events.WaitForChannelClosed(context.Background(), milestoneConfirmedEventChan); err != nil {
+		if err := milestoneConfirmedListener.Wait(context.Background()); err != nil {
 			return iotago.EmptyBlockID(), err
 		}
 	}
@@ -541,9 +525,10 @@ func sendBlock(block *iotago.Block, msIndex ...iotago.MilestoneIndex) (iotago.Bl
 	return blockID, nil
 }
 
-func configureEvents() {
+func attachEvents() func() {
+
 	// pass all new solid blocks to the selector
-	onBlockSolid = events.NewClosure(func(metadata *inx.BlockMetadata) {
+	onBlockSolid := func(metadata *inx.BlockMetadata) {
 
 		if !deps.NodeBridge.IsNodeSynced() {
 			// ignore tips if the node is not synced,
@@ -559,7 +544,7 @@ func configureEvents() {
 
 		// add tips to the heaviest branch selector
 		if trackedBlocksCount := deps.Selector.OnNewSolidBlock(metadata); trackedBlocksCount >= ParamsCoordinator.Checkpoints.MaxTrackedBlocks {
-			CoreComponent.LogDebugf("Coordinator Tipselector: trackedBlocksCount: %d", trackedBlocksCount)
+			Component.LogDebugf("Coordinator Tipselector: trackedBlocksCount: %d", trackedBlocksCount)
 
 			// issue next checkpoint
 			select {
@@ -568,17 +553,17 @@ func configureEvents() {
 				// do not block if already another signal is waiting
 			}
 		}
-	})
+	}
 
-	onLatestMilestoneChanged = events.NewClosure(func(_ *nodebridge.Milestone) {
+	onLatestMilestoneChanged := func(_ *nodebridge.Milestone) {
 		// reset the milestone timeout ticker
 		deps.Coordinator.ResetMilestoneTimeoutTicker()
 
 		// re-enable the tipselector in case it was disabled
 		deps.Selector.Continue()
-	})
+	}
 
-	onConfirmedMilestoneChanged = events.NewClosure(func(_ *nodebridge.Milestone) {
+	onConfirmedMilestoneChanged := func(_ *nodebridge.Milestone) {
 		heaviestSelectorLock.Lock()
 		defer heaviestSelectorLock.Unlock()
 
@@ -591,35 +576,28 @@ func configureEvents() {
 		// which could contain blocks that are already below max depth.
 		lastCheckpointBlockID = lastMilestoneBlockID
 		lastCheckpointIndex = 0
-	})
+	}
 
-	onMilestoneTimeout = events.NewClosure(func() {
+	onMilestoneTimeout := func() {
 		deps.Selector.Stop()
-	})
+	}
 
-	onIssuedCheckpoint = events.NewClosure(func(checkpointIndex int, tipIndex int, tipsTotal int, blockID iotago.BlockID) {
-		CoreComponent.LogInfof("checkpoint (%d) block issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, blockID.ToHex())
-	})
+	onIssuedCheckpoint := func(checkpointIndex int, tipIndex int, tipsTotal int, blockID iotago.BlockID) {
+		Component.LogInfof("checkpoint (%d) block issued (%d/%d): %v", checkpointIndex+1, tipIndex+1, tipsTotal, blockID.ToHex())
+	}
 
-	onIssuedMilestone = events.NewClosure(func(index iotago.MilestoneIndex, milestoneID iotago.MilestoneID, blockID iotago.BlockID) {
-		CoreComponent.LogInfof("milestone issued (%d) MilestoneID: %s, BlockID: %v", index, iotago.EncodeHex(milestoneID[:]), blockID.ToHex())
-	})
-}
+	onIssuedMilestone := func(index iotago.MilestoneIndex, milestoneID iotago.MilestoneID, blockID iotago.BlockID) {
+		Component.LogInfof("milestone issued (%d) MilestoneID: %s, BlockID: %v", index, iotago.EncodeHex(milestoneID[:]), blockID.ToHex())
+	}
 
-func attachEvents() {
-	deps.TangleListener.Events.BlockSolid.Hook(onBlockSolid)
-	deps.NodeBridge.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged)
-	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged)
-	deps.Coordinator.Events.IssuedCheckpointBlock.Hook(onIssuedCheckpoint)
-	deps.Coordinator.Events.IssuedMilestone.Hook(onIssuedMilestone)
-	deps.Coordinator.Events.MilestoneTimeout.Hook(onMilestoneTimeout)
-}
+	unhook := lo.Batch(
+		deps.TangleListener.Events.BlockSolid.Hook(onBlockSolid).Unhook,
+		deps.NodeBridge.Events.LatestMilestoneChanged.Hook(onLatestMilestoneChanged).Unhook,
+		deps.NodeBridge.Events.ConfirmedMilestoneChanged.Hook(onConfirmedMilestoneChanged).Unhook,
+		deps.Coordinator.Events.IssuedCheckpointBlock.Hook(onIssuedCheckpoint).Unhook,
+		deps.Coordinator.Events.IssuedMilestone.Hook(onIssuedMilestone).Unhook,
+		deps.Coordinator.Events.MilestoneTimeout.Hook(onMilestoneTimeout).Unhook,
+	)
 
-func detachEvents() {
-	deps.TangleListener.Events.BlockSolid.Detach(onBlockSolid)
-	deps.NodeBridge.Events.LatestMilestoneChanged.Detach(onLatestMilestoneChanged)
-	deps.NodeBridge.Events.ConfirmedMilestoneChanged.Detach(onConfirmedMilestoneChanged)
-	deps.Coordinator.Events.IssuedCheckpointBlock.Detach(onIssuedCheckpoint)
-	deps.Coordinator.Events.IssuedMilestone.Detach(onIssuedMilestone)
-	deps.Coordinator.Events.MilestoneTimeout.Detach(onMilestoneTimeout)
+	return unhook
 }

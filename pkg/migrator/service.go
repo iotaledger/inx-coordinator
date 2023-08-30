@@ -7,9 +7,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/iotaledger/hive.go/core/events"
-	"github.com/iotaledger/hive.go/core/ioutils"
-	"github.com/iotaledger/hive.go/core/syncutils"
+	"github.com/iotaledger/hive.go/runtime/event"
+	"github.com/iotaledger/hive.go/runtime/ioutils"
+	"github.com/iotaledger/hive.go/runtime/syncutils"
 	"github.com/iotaledger/hornet/v2/pkg/common"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -30,15 +30,9 @@ var (
 // ServiceEvents are events happening around a MigratorService.
 type ServiceEvents struct {
 	// SoftError is triggered when a soft error is encountered.
-	SoftError *events.Event
+	SoftError *event.Event1[error]
 	// MigratedFundsFetched is triggered when new migration funds were fetched from a legacy node.
-	MigratedFundsFetched *events.Event
-}
-
-// MigratedFundsCaller is an event caller which gets migrated funds passed.
-func MigratedFundsCaller(handler interface{}, params ...interface{}) {
-	//nolint:forcetypeassert // we will replace that with generic events anyway
-	handler.(func([]*iotago.MigratedFundsEntry))(params[0].([]*iotago.MigratedFundsEntry))
+	MigratedFundsFetched *event.Event1[[]*iotago.MigratedFundsEntry]
 }
 
 // Queryer defines the interface used to query the migrated funds.
@@ -78,8 +72,8 @@ type migrationResult struct {
 func NewService(queryer Queryer, stateFilePath string, receiptMaxEntries int) *Service {
 	return &Service{
 		Events: &ServiceEvents{
-			SoftError:            events.NewEvent(events.ErrorCaller),
-			MigratedFundsFetched: events.NewEvent(MigratedFundsCaller),
+			SoftError:            event.New1[error](),
+			MigratedFundsFetched: event.New1[[]*iotago.MigratedFundsEntry](),
 		},
 		queryer:           queryer,
 		migrations:        make(chan *migrationResult),
