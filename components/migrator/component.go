@@ -78,7 +78,7 @@ func provide(c *dig.Container) error {
 		Validator *validator.Validator
 	}
 
-	if err := c.Provide(func(deps serviceDeps) *migrator.Service {
+	return c.Provide(func(deps serviceDeps) *migrator.Service {
 
 		maxReceiptEntries := ParamsMigrator.ReceiptMaxEntries
 		switch {
@@ -93,11 +93,7 @@ func provide(c *dig.Container) error {
 			ParamsMigrator.StateFilePath,
 			ParamsMigrator.ReceiptMaxEntries,
 		)
-	}); err != nil {
-		return err
-	}
-
-	return nil
+	})
 }
 
 func configure() error {
